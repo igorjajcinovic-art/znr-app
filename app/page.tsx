@@ -1,15 +1,11 @@
-export default function HomePage() {
+export default function Page() {
   return (
     <div style={{ padding: 40 }}>
       <h1>ZNR aplikacija</h1>
 
-      <ul>
-        <li><a href="/tvrtke">Tvrtke</a></li>
-        <li><a href="/radnici">Radnici</a></li>
-        <li><a href="/lijecnicki">Liječnički</a></li>
-        <li><a href="/osposobljavanja">Osposobljavanja</a></li>
-        <li><a href="/upozorenja">Upozorenja</a></li>
-      </ul>
+      <p>Radi 🎉</p>
+
+      <a href="/tvrtke">Idi na tvrtke</a>
     </div>
   );
 }
