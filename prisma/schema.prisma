@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tvrtka {
+  id               String                    @id @default(cuid())
+  naziv            String
+  oib              String                    @unique
+  adresa           String?
+  radnici          Radnik[]
+  lijecnicki       LijecnickiPregled[]
+  osposobljavanja  StrucnoOsposobljavanje[]
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+}
+
+model Radnik {
+  id               String    @id @default(cuid())
+  firmaId          String
+  ime              String
+  oib              String
+  aktivan          Boolean   @default(true)
+  datumOdjave      DateTime?
+  datumZaposlenja  DateTime
+  datumRodjenja    DateTime?
+  grad             String?
+  radnoMjesto      String?
+  imaDozvolu       Boolean   @default(false)
+  dozvolaDo        DateTime?
+  znrOsposobljen   Boolean   @default(false)
+  znrDatum         DateTime?
+  zopOsposobljen   Boolean   @default(false)
+  zopDatum         DateTime?
+
+  tvrtka           Tvrtka    @relation(fields: [firmaId], references: [id], onDelete: Cascade)
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([firmaId])
+}
+
+model LijecnickiPregled {
+  id         String    @id @default(cuid())
+  firmaId    String
+  oib        String
+  vrsta      String?
+  datum      DateTime
+  vrijediDo  DateTime
+  status     String    @default("aktivno") // aktivno, uskoro, isteklo
+  napomena   String?
+
+  tvrtka     Tvrtka    @relation(fields: [firmaId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([firmaId])
+  @@index([firmaId, oib])
+  @@index([status])
+}
+
+model StrucnoOsposobljavanje {
+  id         String    @id @default(cuid())
+  firmaId    String
+  oib        String
+  vrsta      String
+  datum      DateTime
+  vrijediDo  DateTime
+  status     String    @default("aktivno") // aktivno, uskoro, isteklo
+  napomena   String?
+
+  tvrtka     Tvrtka    @relation(fields: [firmaId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([firmaId])
+  @@index([firmaId, oib])
+  @@index([status])
+}
+
+model Oprema {
+  id             String   @id @default(cuid())
+  firmaId        String
+  oib            String
+  vrsta          String
+  datumIzdavanja DateTime
+  kolicina       Int      @default(1)
+  rokZamjene     DateTime?
+  status         String   @default("aktivno") // aktivno, uskoro, isteklo
+  napomena       String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([firmaId])
+  @@index([firmaId, oib])
+  @@index([status])
+}
+
+model RadnaOprema {
+  id              String   @id @default(cuid())
+  firmaId         String
+  naziv           String
+  tip             String
+  serijskiBroj    String?
+  inventarniBroj  String?
+  proizvodjac     String?
+  model           String?
+  datumNabave     DateTime?
+  datumServisa    DateTime?
+  sljedeciServis  DateTime?
+  status          String   @default("aktivno")
+  napomena        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([firmaId])
+  @@index([serijskiBroj])
+  @@index([inventarniBroj])
+  @@index([status])
+}
+
+model RadnaOpremaDokument {
+  id             String   @id @default(cuid())
+  radnaOpremaId  String
+  naziv          String
+  tip            String
+  fileName       String
+  fileUrl        String
+  mimeType       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([radnaOpremaId])
+}
+
+model Planer {
+  id          String   @id @default(cuid())
+  firmaId     String
+  naziv       String
+  opis        String?
+  datum       DateTime
+  tip         String
+  status      String   @default("planirano")
+  radnikId    String?
+  opremaId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([firmaId])
+  @@index([datum])
+  @@index([status])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  ime          String
+  lozinkaHash  String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
