@@ -386,61 +386,76 @@ export default function RadniciTvrtkePage() {
   };
 
   const importCsv = async () => {
-    if (!firmaId) {
-      alert("Nedostaje ID tvrtke.");
-      return;
+  if (!firmaId) {
+    alert("Nedostaje ID tvrtke.");
+    return;
+  }
+
+  if (!csvFile) {
+    alert("Odaberi CSV file.");
+    return;
+  }
+
+  try {
+    setImportanje(true);
+    setGreska("");
+
+    const text = await csvFile.text();
+    const rows = readCsvRows(text);
+
+    if (rows.length === 0) {
+      throw new Error("CSV nema podataka ili zaglavlje nije ispravno.");
     }
 
-    if (!csvFile) {
-      alert("Odaberi CSV file.");
-      return;
+    const res = await fetch("/api/radnici/import", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        firmaId,
+        rows,
+      }),
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || "Greška kod uvoza CSV-a.");
     }
 
-    try {
-      setImportanje(true);
-      setGreska("");
+    const result = await res.json();
 
-      const text = await csvFile.text();
-      const rows = readCsvRows(text);
+    let poruka = `Uvoz završen.\nUvezeno: ${result.imported}\nPreskočeno: ${result.skipped}`;
 
-      if (rows.length === 0) {
-        throw new Error("CSV nema podataka ili zaglavlje nije ispravno.");
-      }
+    if (result.skippedRows && result.skippedRows.length > 0) {
+      const detalji = result.skippedRows
+        .slice(0, 20)
+        .map(
+          (r: any) =>
+            `Red ${r.red}: ${r.razlog}`
+        )
+        .join("\n");
 
-      const res = await fetch("/api/radnici/import", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          firmaId,
-          rows,
-        }),
-      });
-
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || "Greška kod uvoza CSV-a.");
-      }
-
-      const result = await res.json();
-
-      alert(
-        `Uvoz završen.\nUvezeno ili ažurirano: ${result.imported}\nPreskočeno: ${result.skipped}`
-      );
-
-      setCsvFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-
-      await ucitajSve();
-    } catch (err) {
-      setGreska(err instanceof Error ? err.message : "Greška kod uvoza.");
-    } finally {
-      setImportanje(false);
+      poruka += `\n\nRazlozi preskakanja:\n${detalji}`;
     }
-  };
+
+    alert(poruka);
+
+    setCsvFile(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    await ucitajSve();
+  } catch (err) {
+    setGreska(
+      err instanceof Error ? err.message : "Greška kod uvoza."
+    );
+  } finally {
+    setImportanje(false);
+  }
+};
 
   const daysUntil = (value: string | null): number | null => {
     if (!value) return null;
