@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 
 type ImportRow = {
+  [key: string]: unknown;
+
   ime?: string;
   prezime?: string;
   oib?: string;
@@ -22,15 +24,14 @@ function parseBool(value: unknown): boolean {
   if (typeof value === "boolean") return value;
 
   const v = String(value ?? "").trim().toLowerCase();
-  return ["da", "true", "1", "yes", "y"].includes(v);
+
+  return ["da", "true", "1", "yes", "y", "aktivan"].includes(v);
 }
 
 function cleanOib(value: unknown): string {
   const raw = String(value ?? "").trim();
 
   if (!raw) return "";
-
-  if (/^\d{11}$/.test(raw)) return raw;
 
   const normalized = raw.replace(",", ".").replace(/\s/g, "");
 
@@ -82,6 +83,16 @@ function parseDate(value: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function getValue(row: ImportRow, keys: string[]): unknown {
+  for (const key of keys) {
+    if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== "") {
+      return row[key];
+    }
+  }
+
+  return "";
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -109,12 +120,29 @@ export async function POST(req: Request) {
     for (let i = 0; i < rows.length; i += 1) {
       const row = rows[i];
 
-      const imeRaw = String(row.ime ?? "").trim();
-      const prezimeRaw = String(row.prezime ?? "").trim();
+      const imeRaw = String(
+        getValue(row, ["ime", "Ime", "Ime i prezime", "ime i prezime"])
+      ).trim();
+
+      const prezimeRaw = String(
+        getValue(row, ["prezime", "Prezime", "__EMPTY", "", "Prezime radnika"])
+      ).trim();
 
       const ime = prezimeRaw ? `${imeRaw} ${prezimeRaw}`.trim() : imeRaw;
-      const oib = cleanOib(row.oib);
-      const datumZaposlenja = parseDate(row.datumZaposlenja);
+
+      const oib = cleanOib(getValue(row, ["oib", "OIB", "Oib"]));
+
+      const datumZaposlenja = parseDate(
+        getValue(row, [
+          "datumZaposlenja",
+          "Datum zaposlenja",
+          "datum zaposlenja",
+          "Početak rada",
+          "pocetak rada",
+          "Poce­tak rada",
+          "Zaposlenje",
+        ])
+      );
 
       const razlozi: string[] = [];
 
@@ -124,7 +152,11 @@ export async function POST(req: Request) {
         razlozi.push(`OIB nema 11 znamenki (${oib})`);
       }
       if (!datumZaposlenja) {
-        razlozi.push(`neispravan početak rada (${row.datumZaposlenja ?? ""})`);
+        razlozi.push(
+          `neispravan početak rada (${String(
+            getValue(row, ["datumZaposlenja", "Početak rada", "Datum zaposlenja"])
+          )})`
+        );
       }
 
       if (razlozi.length > 0) {
@@ -138,19 +170,46 @@ export async function POST(req: Request) {
       }
 
       const aktivan = parseBool(
-        row.aktivan === undefined || row.aktivan === null || row.aktivan === ""
-          ? true
-          : row.aktivan
+        getValue(row, ["aktivan", "Aktivan", "Status"]) || true
       );
 
-      const datumOdjave = aktivan ? null : parseDate(row.datumOdjave);
-      const datumRodjenja = parseDate(row.datumRodjenja);
-      const imaDozvolu = parseBool(row.imaDozvolu);
-      const dozvolaDo = imaDozvolu ? parseDate(row.dozvolaDo) : null;
-      const znrOsposobljen = parseBool(row.znrOsposobljen);
-      const znrDatum = znrOsposobljen ? parseDate(row.znrDatum) : null;
-      const zopOsposobljen = parseBool(row.zopOsposobljen);
-      const zopDatum = zopOsposobljen ? parseDate(row.zopDatum) : null;
+      const datumOdjave = aktivan
+        ? null
+        : parseDate(getValue(row, ["datumOdjave", "Datum odjave", "Odjava"]));
+
+      const datumRodjenja = parseDate(
+        getValue(row, ["datumRodjenja", "Datum rođenja", "Datum rodjenja"])
+      );
+
+      const grad = String(getValue(row, ["grad", "Grad", "Grad / mjesto"])).trim();
+
+      const radnoMjesto = String(
+        getValue(row, ["radnoMjesto", "Radno mjesto", "radno mjesto"])
+      ).trim();
+
+      const imaDozvolu = parseBool(
+        getValue(row, ["imaDozvolu", "Ima radnu dozvolu", "Radna dozvola"])
+      );
+
+      const dozvolaDo = imaDozvolu
+        ? parseDate(getValue(row, ["dozvolaDo", "Radna dozvola do", "Dozvola do"]))
+        : null;
+
+      const znrOsposobljen = parseBool(
+        getValue(row, ["znrOsposobljen", "ZNR osposobljen", "ZNR"])
+      );
+
+      const znrDatum = znrOsposobljen
+        ? parseDate(getValue(row, ["znrDatum", "Datum ZNR", "ZNR datum"]))
+        : null;
+
+      const zopOsposobljen = parseBool(
+        getValue(row, ["zopOsposobljen", "ZOP osposobljen", "ZOP"])
+      );
+
+      const zopDatum = zopOsposobljen
+        ? parseDate(getValue(row, ["zopDatum", "Datum ZOP", "ZOP datum"]))
+        : null;
 
       await prisma.$transaction(async (tx) => {
         await tx.radnik.updateMany({
@@ -173,10 +232,8 @@ export async function POST(req: Request) {
             datumOdjave,
             datumZaposlenja: datumZaposlenja as Date,
             datumRodjenja,
-            grad: row.grad ? String(row.grad).trim() : null,
-            radnoMjesto: row.radnoMjesto
-              ? String(row.radnoMjesto).trim()
-              : null,
+            grad: grad || null,
+            radnoMjesto: radnoMjesto || null,
             imaDozvolu,
             dozvolaDo,
             znrOsposobljen,
@@ -197,7 +254,7 @@ export async function POST(req: Request) {
       skippedRows,
     });
   } catch (error) {
-    console.error(error);
+    console.error("IMPORT RADNICI ERROR:", error);
     return new Response("Greška kod uvoza radnika iz CSV-a.", {
       status: 500,
     });
