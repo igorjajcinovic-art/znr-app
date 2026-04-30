@@ -69,6 +69,7 @@ type FormaRadnik = {
 
 type CsvImportRow = {
   ime: string;
+  prezime: string;
   oib: string;
   aktivan: string;
   datumOdjave: string;
@@ -326,64 +327,109 @@ export default function RadniciTvrtkePage() {
       .trim();
 
   const readCsvRows = (text: string): CsvImportRow[] => {
-    const lines = text
-      .replace(/\r/g, "")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
+  const lines = text
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 
-    if (lines.length < 2) return [];
+  if (lines.length < 2) return [];
 
-    const header = parseCsvLine(lines[0]).map(normalizeHeader);
+  const headerRaw = parseCsvLine(lines[0]);
+  const header = headerRaw.map(normalizeHeader);
 
-    const indexOf = (...aliases: string[]) => {
-      const normalizedAliases = aliases.map(normalizeHeader);
-      return header.findIndex((h) => normalizedAliases.includes(h));
+  const indexOf = (...aliases: string[]) => {
+    const normalizedAliases = aliases.map(normalizeHeader);
+    return header.findIndex((h) => normalizedAliases.includes(h));
+  };
+
+  const idxAktivan = indexOf("aktivan", "status");
+  const idxIme = indexOf("ime i prezime", "ime", "radnik");
+  const idxPrezime = indexOf("prezime");
+
+  const idxOib = indexOf("oib", "oib radnika");
+
+  const idxDatumZaposlenja = indexOf(
+    "pocetak rada",
+    "početak rada",
+    "datum zaposlenja",
+    "datum zaposljenja",
+    "zaposlenje"
+  );
+
+  const idxDatumOdjave = indexOf("datum odjave", "odjava");
+  const idxDatumRodjenja = indexOf("datum rodjenja", "datum rođenja");
+  const idxGrad = indexOf("grad", "grad / mjesto", "grad mjesto");
+  const idxRadnoMjesto = indexOf("radno mjesto");
+  const idxImaDozvolu = indexOf("ima radnu dozvolu", "dozvola");
+  const idxDozvolaDo = indexOf("radna dozvola do", "dozvola do");
+  const idxZnrOsposobljen = indexOf("znr osposobljen", "znr");
+  const idxZnrDatum = indexOf("datum znr", "znr datum");
+  const idxZopOsposobljen = indexOf("zop osposobljen", "zop");
+  const idxZopDatum = indexOf("datum zop", "zop datum");
+
+  const isDateLike = (value: string) => {
+    const v = value.trim();
+
+    if (!v || v === "0") return false;
+
+    return (
+      /^\d{1,2}\.\d{1,2}\.\d{4}\.?$/.test(v) ||
+      /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v) ||
+      /^\d{4}-\d{2}-\d{2}$/.test(v) ||
+      /^\d{4,6}$/.test(v)
+    );
+  };
+
+  return lines.slice(1).map((line) => {
+    const cols = parseCsvLine(line);
+
+    const get = (index: number) => {
+      if (index < 0) return "";
+      return String(cols[index] ?? "").trim();
     };
 
-    const idxIme = indexOf("ime i prezime", "ime", "radnik");
-    const idxOib = indexOf("oib");
-    const idxAktivan = indexOf("aktivan");
-    const idxDatumOdjave = indexOf("datum odjave", "odjava");
-    const idxDatumZaposlenja = indexOf(
-      "pocetak rada",
-      "početak rada",
-      "datum zaposlenja",
-      "zaposlenje"
-    );
-    const idxDatumRodjenja = indexOf("datum rodjenja", "datum rođenja");
-    const idxGrad = indexOf("grad", "grad / mjesto", "grad mjesto");
-    const idxRadnoMjesto = indexOf("radno mjesto");
-    const idxImaDozvolu = indexOf("ima radnu dozvolu", "dozvola");
-    const idxDozvolaDo = indexOf("radna dozvola do", "dozvola do");
-    const idxZnrOsposobljen = indexOf("znr osposobljen", "znr");
-    const idxZnrDatum = indexOf("datum znr", "znr datum");
-    const idxZopOsposobljen = indexOf("zop osposobljen", "zop");
-    const idxZopDatum = indexOf("datum zop", "zop datum");
+    let ime = get(idxIme);
 
-    return lines.slice(1).map((line) => {
-      const cols = parseCsvLine(line);
+    let prezime =
+      idxPrezime >= 0
+        ? get(idxPrezime)
+        : idxIme >= 0
+        ? get(idxIme + 1)
+        : "";
 
-      const get = (index: number) => (index >= 0 ? cols[index] ?? "" : "");
+    const oib = get(idxOib);
 
-      return {
-        ime: get(idxIme),
-        oib: get(idxOib),
-        aktivan: get(idxAktivan),
-        datumOdjave: get(idxDatumOdjave),
-        datumZaposlenja: get(idxDatumZaposlenja),
-        datumRodjenja: get(idxDatumRodjenja),
-        grad: get(idxGrad),
-        radnoMjesto: get(idxRadnoMjesto),
-        imaDozvolu: get(idxImaDozvolu),
-        dozvolaDo: get(idxDozvolaDo),
-        znrOsposobljen: get(idxZnrOsposobljen),
-        znrDatum: get(idxZnrDatum),
-        zopOsposobljen: get(idxZopOsposobljen),
-        zopDatum: get(idxZopDatum),
-      };
-    });
-  };
+    let datumZaposlenja = get(idxDatumZaposlenja);
+
+    if (!isDateLike(datumZaposlenja)) {
+      const datumIzReda = cols.find((col, index) => {
+        if (index <= idxOib) return false;
+        return isDateLike(String(col ?? ""));
+      });
+
+      datumZaposlenja = datumIzReda ? String(datumIzReda).trim() : "";
+    }
+
+    return {
+      ime,
+      prezime,
+      oib,
+      aktivan: get(idxAktivan),
+      datumOdjave: get(idxDatumOdjave),
+      datumZaposlenja,
+      datumRodjenja: get(idxDatumRodjenja),
+      grad: get(idxGrad),
+      radnoMjesto: get(idxRadnoMjesto),
+      imaDozvolu: get(idxImaDozvolu),
+      dozvolaDo: get(idxDozvolaDo),
+      znrOsposobljen: get(idxZnrOsposobljen),
+      znrDatum: get(idxZnrDatum),
+      zopOsposobljen: get(idxZopOsposobljen),
+      zopDatum: get(idxZopDatum),
+    };
+  });
+};
 
   const importCsv = async () => {
   if (!firmaId) {
