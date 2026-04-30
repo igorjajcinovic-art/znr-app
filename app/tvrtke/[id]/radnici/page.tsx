@@ -425,21 +425,7 @@ export default function RadniciTvrtkePage() {
 
     const result = await res.json();
 
-    let poruka = `Uvoz završen.\nUvezeno: ${result.imported}\nPreskočeno: ${result.skipped}`;
-
-    if (result.skippedRows && result.skippedRows.length > 0) {
-      const detalji = result.skippedRows
-        .slice(0, 20)
-        .map(
-          (r: any) =>
-            `Red ${r.red}: ${r.razlog}`
-        )
-        .join("\n");
-
-      poruka += `\n\nRazlozi preskakanja:\n${detalji}`;
-    }
-
-    alert(poruka);
+    alert(JSON.stringify(result, null, 2));
 
     setCsvFile(null);
 
@@ -449,9 +435,7 @@ export default function RadniciTvrtkePage() {
 
     await ucitajSve();
   } catch (err) {
-    setGreska(
-      err instanceof Error ? err.message : "Greška kod uvoza."
-    );
+    setGreska(err instanceof Error ? err.message : "Greška kod uvoza.");
   } finally {
     setImportanje(false);
   }
