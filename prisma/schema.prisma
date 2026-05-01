@@ -21,7 +21,7 @@ model Tvrtka {
 
 model Radnik {
   id               String    @id @default(cuid())
-  firmaId          String
+  const firmaId = formData.get("firmaId")?.toString();
   ime              String
   oib              String
   aktivan          Boolean   @default(true)
