@@ -40,6 +40,20 @@ function parseDate(value: unknown): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function parseAktivan(value: unknown): boolean {
+  const s = String(value ?? "").trim().toLowerCase();
+
+  if (!s) return true;
+
+  return (
+    s === "da" ||
+    s === "aktivan" ||
+    s === "true" ||
+    s === "1" ||
+    s === "yes"
+  );
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -96,12 +110,27 @@ export async function POST(req: Request) {
 
       const datumZaposlenja = parseDate(datumRaw);
 
+      const aktivanRaw = val(row, [
+        "Aktivan",
+        "aktivan",
+        "Status",
+        "status",
+      ]);
+
+      const aktivan = parseAktivan(aktivanRaw);
+
       const razlozi: string[] = [];
 
       if (!ime) razlozi.push("nedostaje ime");
       if (!oib) razlozi.push("nedostaje OIB");
-      if (oib && oib.length !== 11) razlozi.push(`OIB nema 11 znamenki (${oib})`);
-      if (!datumZaposlenja) razlozi.push(`nedostaje/neispravan datum (${datumRaw})`);
+
+      if (oib && oib.length !== 11) {
+        razlozi.push(`OIB nema 11 znamenki (${oib})`);
+      }
+
+      if (!datumZaposlenja) {
+        razlozi.push(`nedostaje/neispravan datum (${datumRaw})`);
+      }
 
       if (razlozi.length > 0 || !datumZaposlenja) {
         skipped++;
@@ -121,7 +150,7 @@ export async function POST(req: Request) {
           ime,
           oib,
           datumZaposlenja: datumZaposlenjaSafe,
-          aktivan: true,
+          aktivan,
         },
       });
 
