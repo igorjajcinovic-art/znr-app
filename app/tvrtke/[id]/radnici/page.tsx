@@ -1354,6 +1354,20 @@ export default function RadniciTvrtkePage() {
               Izvoz CSV
             </button>
           </div>
+          <button
+  style={smallRedButtonStyle}
+  onClick={async () => {
+    if (!confirm("Obrisati SVE radnike ove tvrtke?")) return;
+
+    await fetch(`/api/radnici?firmaId=${firmaId}`, {
+      method: "DELETE",
+    });
+
+    await ucitajSve();
+  }}
+>
+  Obriši sve radnike
+</button>
 
           <div style={tableWrapStyle}>
             <table style={tableStyle}>

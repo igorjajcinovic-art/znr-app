@@ -41,3 +41,25 @@ export async function POST(req: Request) {
     });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const firmaId = searchParams.get("firmaId");
+
+    if (!firmaId) {
+      return new Response("Nedostaje firmaId.", { status: 400 });
+    }
+
+    await prisma.radnik.deleteMany({
+      where: { firmaId },
+    });
+
+    return Response.json({ ok: true });
+  } catch (error) {
+    console.error("DELETE RADNICI ERROR:", error);
+    return new Response("Greška kod brisanja radnika.", {
+      status: 500,
+    });
+  }
+}
