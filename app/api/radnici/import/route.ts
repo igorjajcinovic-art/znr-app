@@ -1,69 +1,141 @@
 import { prisma } from "@/lib/prisma";
 
-type Row = Record<string, any>;
+type Row = Record<string, unknown>;
 
-function get(row: Row, keys: string[]) {
-  for (const k of keys) {
-    if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
-      return String(row[k]).trim();
+function get(row: Row, keys: string[]): string {
+  for (const key of keys) {
+    const value = row[key];
+
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      return String(value).trim();
     }
   }
+
   return "";
 }
 
-function parseDate(val: string): Date | null {
-  if (!val) return null;
+function cleanOib(value: string): string {
+  return value.replace(/\D/g, "");
+}
 
-  // 17.06.2019
-  if (val.includes(".")) {
-    const [d, m, y] = val.split(".");
-    if (!d || !m || !y) return null;
-    return new Date(`${y}-${m}-${d}`);
+function parseDate(value: string): Date | null {
+  const v = value.trim();
+
+  if (!v) return null;
+
+  const dot = v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\.?$/);
+
+  if (dot) {
+    const [, d, m, y] = dot;
+
+    const date = new Date(
+      `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T00:00:00.000Z`
+    );
+
+    return Number.isNaN(date.getTime()) ? null : date;
   }
 
-  const d = new Date(val);
-  return isNaN(d.getTime()) ? null : d;
+  const iso = new Date(v);
+  return Number.isNaN(iso.getTime()) ? null : iso;
 }
 
-function parseAktivan(val: string): boolean {
-  const v = val.toLowerCase();
-  return v === "da" || v === "true" || v === "1" || v === "aktivan";
-}
+function parseAktivan(value: string): boolean {
+  const v = value.trim().toLowerCase();
 
-function cleanOib(val: string): string {
-  return val.replace(/\D/g, "");
+  if (!v) return true;
+
+  return v === "da" || v === "aktivan" || v === "true" || v === "1";
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const firmaId = String(body?.firmaId ?? "");
-    const rows: Row[] = body?.rows || [];
+    const firmaId = String(body?.firmaId ?? "").trim();
+    const rows: Row[] = Array.isArray(body?.rows) ? body.rows : [];
+
+    if (!firmaId) {
+      return new Response("Nedostaje firmaId", { status: 400 });
+    }
+
+    if (!rows.length) {
+      return new Response("Nema redaka za uvoz", { status: 400 });
+    }
 
     let imported = 0;
     let skipped = 0;
 
-    const skippedRows: any[] = [];
+    const skippedRows: Array<{
+      red: number;
+      razlog: string;
+      podatak: Row;
+    }> = [];
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
 
-      const ime = get(row, ["Ime i prezime", "ime i prezime", "ime"]);
-      const oib = cleanOib(get(row, ["OIB", "oib"]));
-      const datumRaw = get(row, ["Početak rada", "datum zaposlenja"]);
-      const aktivanRaw = get(row, ["Aktivan", "Status"]);
+      const ime = get(row, [
+        "ime",
+        "Ime",
+        "Ime i prezime",
+        "ime i prezime",
+        "imePrezime",
+      ]);
 
-      const datum = parseDate(datumRaw);
+      const oib = cleanOib(
+        get(row, [
+          "oib",
+          "OIB",
+          "Oib",
+        ])
+      );
+
+      const datumRaw = get(row, [
+        "datumZaposlenja",
+        "datum zaposlenja",
+        "Datum zaposlenja",
+        "Početak rada",
+        "početak rada",
+        "Pocetak rada",
+        "pocetak rada",
+        "pocetakRada",
+        "početakRada",
+        "datum",
+        "Datum",
+      ]);
+
+      const aktivanRaw = get(row, [
+        "aktivan",
+        "Aktivan",
+        "status",
+        "Status",
+      ]);
+
+      const datumZaposlenja = parseDate(datumRaw);
       const aktivan = parseAktivan(aktivanRaw);
 
-      if (!ime || !oib || !datum) {
+      const razlozi: string[] = [];
+
+      if (!ime) razlozi.push("nedostaje ime");
+      if (!oib) razlozi.push("nedostaje OIB");
+
+      if (oib && oib.length !== 11) {
+        razlozi.push(`OIB nema 11 znamenki (${oib})`);
+      }
+
+      if (!datumZaposlenja) {
+        razlozi.push(`nedostaje/neispravan datum (${datumRaw || "prazno"})`);
+      }
+
+      if (razlozi.length > 0 || !datumZaposlenja) {
         skipped++;
+
         skippedRows.push({
           red: i + 2,
-          razlog: "nedostaje ime/OIB/datum",
+          razlog: razlozi.join(", "),
           podatak: row,
         });
+
         continue;
       }
 
@@ -72,7 +144,7 @@ export async function POST(req: Request) {
           firmaId,
           ime,
           oib,
-          datumZaposlenja: datum,
+          datumZaposlenja,
           aktivan,
         },
       });
@@ -86,8 +158,11 @@ export async function POST(req: Request) {
       skipped,
       skippedRows,
     });
-  } catch (err) {
-    console.error(err);
-    return new Response("Greška", { status: 500 });
+  } catch (error) {
+    console.error("CSV IMPORT ERROR:", error);
+
+    return new Response("Greška kod uvoza CSV-a", {
+      status: 500,
+    });
   }
 }
