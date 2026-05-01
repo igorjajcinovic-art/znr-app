@@ -1,44 +1,44 @@
 import { prisma } from "@/lib/prisma";
 
-type ImportRow = {
-  [key: string]: unknown;
-};
+type ImportRow = Record<string, unknown>;
 
-// --- helpers ---
+function val(row: ImportRow, keys: string[]) {
+  for (const key of keys) {
+    const value = row[key];
 
-function parseBool(value: unknown): boolean {
-  if (typeof value === "boolean") return value;
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      return String(value).trim();
+    }
+  }
 
-  const v = String(value ?? "").trim().toLowerCase();
-  return ["da", "true", "1", "yes", "y", "aktivan"].includes(v);
+  return "";
 }
 
-function cleanOib(value: unknown): string {
-  const raw = String(value ?? "").trim();
-  if (!raw) return "";
-
-  // ukloni sve osim brojeva
-  return raw.replace(/\D/g, "");
+function cleanOib(value: unknown) {
+  return String(value ?? "").replace(/\D/g, "");
 }
 
 function parseDate(value: unknown): Date | null {
-  if (!value) return null;
+  const s = String(value ?? "").trim();
 
-  const v = String(value).trim();
-  if (!v) return null;
+  if (!s) return null;
 
-  // 17.06.2019
-  if (v.includes(".")) {
-    const [d, m, y] = v.split(".");
-    if (!d || !m || !y) return null;
-    return new Date(`${y}-${m}-${d}`);
+  const dotDate = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\.?$/);
+
+  if (dotDate) {
+    const [, day, month, year] = dotDate;
+
+    const date = new Date(
+      `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T00:00:00.000Z`
+    );
+
+    return Number.isNaN(date.getTime()) ? null : date;
   }
 
-  const d = new Date(v);
-  return isNaN(d.getTime()) ? null : d;
-}
+  const date = new Date(s);
 
-// --- main API ---
+  return Number.isNaN(date.getTime()) ? null : date;
+}
 
 export async function POST(req: Request) {
   try {
@@ -51,65 +51,81 @@ export async function POST(req: Request) {
       return new Response("Nedostaje firmaId", { status: 400 });
     }
 
-    if (rows.length === 0) {
+    if (!rows.length) {
       return new Response("Nema podataka za import", { status: 400 });
     }
 
     let imported = 0;
     let skipped = 0;
 
-    const skippedRows: any[] = [];
+    const skippedRows: Array<{
+      red: number;
+      razlog: string;
+      podatak: ImportRow;
+    }> = [];
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
 
-      // 👉 uzmi podatke DIREKTNO iz CSV-a
-      const fullName = String(
-        row["Ime i prezime"] ||
-          row["ime i prezime"] ||
-          row["ime"] ||
-          ""
-      ).trim();
+      const ime = val(row, [
+        "ime",
+        "Ime",
+        "imePrezime",
+        "Ime i prezime",
+        "ime i prezime",
+        "IME I PREZIME",
+      ]);
 
-      const oib = cleanOib(row["OIB"] || row["oib"]);
-      const datumRaw =
-        row["Početak rada"] ||
-        row["početak rada"] ||
-        row["datum zaposlenja"];
+      const oib = cleanOib(
+        val(row, [
+          "oib",
+          "OIB",
+          "Oib",
+        ])
+      );
+
+      const datumRaw = val(row, [
+        "datumZaposlenja",
+        "Datum zaposlenja",
+        "datum zaposlenja",
+        "Početak rada",
+        "početak rada",
+        "Pocetak rada",
+        "pocetak rada",
+      ]);
 
       const datumZaposlenja = parseDate(datumRaw);
 
-      // --- VALIDACIJA ---
-      if (!fullName || !oib || !datumZaposlenja) {
+      const razlozi: string[] = [];
+
+      if (!ime) razlozi.push("nedostaje ime");
+      if (!oib) razlozi.push("nedostaje OIB");
+      if (oib && oib.length !== 11) razlozi.push(`OIB nema 11 znamenki (${oib})`);
+      if (!datumZaposlenja) razlozi.push(`nedostaje/neispravan datum (${datumRaw})`);
+
+      if (razlozi.length > 0 || !datumZaposlenja) {
         skipped++;
         skippedRows.push({
           red: i + 2,
-          razlog: "nedostaje ime/OIB/datum",
+          razlog: razlozi.join(", "),
           podatak: row,
         });
         continue;
       }
 
-      try {
-        await prisma.radnik.create({
-          data: {
-            firmaId,
-            ime: fullName, // 🔥 VAŽNO: ime i prezime zajedno
-            oib,
-            datumZaposlenja,
-            aktivan: true,
-          },
-        });
+      const datumZaposlenjaSafe: Date = datumZaposlenja;
 
-        imported++;
-      } catch (err) {
-        skipped++;
-        skippedRows.push({
-          red: i + 2,
-          razlog: "greška u bazi",
-          podatak: row,
-        });
-      }
+      await prisma.radnik.create({
+        data: {
+          firmaId,
+          ime,
+          oib,
+          datumZaposlenja: datumZaposlenjaSafe,
+          aktivan: true,
+        },
+      });
+
+      imported++;
     }
 
     return Response.json({
@@ -118,9 +134,11 @@ export async function POST(req: Request) {
       skipped,
       skippedRows,
     });
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("CSV IMPORT ERROR:", error);
 
-    return new Response("Server error", { status: 500 });
+    return new Response("Greška kod uvoza radnika", {
+      status: 500,
+    });
   }
 }
