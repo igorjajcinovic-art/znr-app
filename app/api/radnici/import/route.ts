@@ -47,6 +47,18 @@ function parseAktivan(value: string): boolean {
   return v === "da" || v === "aktivan" || v === "true" || v === "1";
 }
 
+function parseDaNe(value: string): boolean {
+  const v = value.trim().toLowerCase();
+
+  return (
+    v === "da" ||
+    v === "true" ||
+    v === "1" ||
+    v === "yes" ||
+    v === "ima"
+  );
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -111,8 +123,42 @@ export async function POST(req: Request) {
         "Status",
       ]);
 
+      const radnoMjesto = get(row, [
+        "radnoMjesto",
+        "Radno mjesto",
+        "radno mjesto",
+      ]);
+
+      const grad = get(row, [
+        "grad",
+        "Grad",
+        "Grad / mjesto",
+        "grad / mjesto",
+        "Grad mjesto",
+      ]);
+
+      const imaDozvoluRaw = get(row, [
+        "imaDozvolu",
+        "Ima radnu dozvolu",
+        "ima radnu dozvolu",
+        "Radna dozvola",
+        "radna dozvola",
+        "Dozvola",
+        "dozvola",
+      ]);
+
+      const dozvolaDoRaw = get(row, [
+        "dozvolaDo",
+        "Dozvola do",
+        "dozvola do",
+        "Radna dozvola do",
+        "radna dozvola do",
+      ]);
+
       const datumZaposlenja = parseDate(datumRaw);
       const aktivan = parseAktivan(aktivanRaw);
+      const imaDozvolu = parseDaNe(imaDozvoluRaw);
+      const dozvolaDo = imaDozvolu ? parseDate(dozvolaDoRaw) : null;
 
       const razlozi: string[] = [];
 
@@ -146,6 +192,10 @@ export async function POST(req: Request) {
           oib,
           datumZaposlenja,
           aktivan,
+          radnoMjesto: radnoMjesto || null,
+          grad: grad || null,
+          imaDozvolu,
+          dozvolaDo,
         },
       });
 
