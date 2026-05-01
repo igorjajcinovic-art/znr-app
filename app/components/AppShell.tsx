@@ -8,9 +8,11 @@ import type { ReactNode } from "react";
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [brojUpozorenja, setBrojUpozorenja] = useState<number>(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     ucitajBrojUpozorenja();
+    setMenuOpen(false);
   }, [pathname]);
 
   const ucitajBrojUpozorenja = async () => {
@@ -50,7 +52,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const getTitle = () => {
     if (pathname === "/") return "Dashboard";
     if (pathname === "/tvrtke") return "Tvrtke";
-
     if (pathname.includes("/radnici")) return "Radnici";
     if (pathname.includes("/lijecnicki")) return "Liječnički pregledi";
     if (pathname.includes("/osposobljavanja")) return "Osposobljavanja";
@@ -115,57 +116,123 @@ export default function AppShell({ children }: { children: ReactNode }) {
     },
   ];
 
+  const SidebarContent = (
+    <>
+      <Link href={linkTvrtka} style={logoWrapStyle}>
+        <div style={logoIconStyle}>🛡️</div>
+        <div>
+          <div style={logoTitleStyle}>ZNR</div>
+          <div style={logoSubtitleStyle}>APLIKACIJA</div>
+        </div>
+      </Link>
+
+      <nav style={navStyle}>
+        {navItems.map((item) => {
+          const active =
+            item.href === "/tvrtke"
+              ? pathname === "/tvrtke"
+              : pathname === item.href || pathname.startsWith(item.href + "/");
+
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              style={{
+                ...navItemStyle,
+                ...(active ? navItemActiveStyle : {}),
+              }}
+            >
+              <span style={navIconStyle}>{item.icon}</span>
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {!imaAktivnuFirmu ? (
+        <div style={infoBoxStyle}>Odaberi tvrtku da bi se otvorili moduli.</div>
+      ) : null}
+
+      <div style={sidebarFooterStyle}>
+        <div style={footerLogoStyle}>🛡️</div>
+        <div>
+          <div style={footerTitleStyle}>ZNR aplikacija</div>
+          <div style={footerVersionStyle}>v1.0.0</div>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div style={shellStyle}>
-      <aside style={sidebarStyle}>
-        <Link href={linkTvrtka} style={logoWrapStyle}>
-          <div style={logoIconStyle}>🛡️</div>
-          <div>
-            <div style={logoTitleStyle}>ZNR</div>
-            <div style={logoSubtitleStyle}>APLIKACIJA</div>
-          </div>
-        </Link>
+      <style jsx global>{`
+        @media (max-width: 900px) {
+          .znr-desktop-sidebar {
+            display: none !important;
+          }
 
-        <nav style={navStyle}>
-          {navItems.map((item) => {
-            const active =
-              item.href === "/tvrtke"
-                ? pathname === "/tvrtke"
-                : pathname === item.href || pathname.startsWith(item.href + "/");
+          .znr-main {
+            margin-left: 0 !important;
+          }
 
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                style={{
-                  ...navItemStyle,
-                  ...(active ? navItemActiveStyle : {}),
-                }}
-              >
-                <span style={navIconStyle}>{item.icon}</span>
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+          .znr-topbar {
+            height: auto !important;
+            min-height: 74px !important;
+            padding: 14px 16px !important;
+            gap: 12px !important;
+          }
 
-        {!imaAktivnuFirmu ? (
-          <div style={infoBoxStyle}>
-            Odaberi tvrtku da bi se otvorili moduli.
-          </div>
-        ) : null}
+          .znr-content {
+            padding: 14px !important;
+            max-width: none !important;
+          }
 
-        <div style={sidebarFooterStyle}>
-          <div style={footerLogoStyle}>🛡️</div>
-          <div>
-            <div style={footerTitleStyle}>ZNR aplikacija</div>
-            <div style={footerVersionStyle}>v1.0.0</div>
-          </div>
-        </div>
+          .znr-mobile-menu-button {
+            display: flex !important;
+          }
+        }
+
+        @media (min-width: 901px) {
+          .znr-mobile-menu-button {
+            display: none !important;
+          }
+        }
+      `}</style>
+
+      <aside className="znr-desktop-sidebar" style={sidebarStyle}>
+        {SidebarContent}
       </aside>
 
-      <main style={mainStyle}>
-        <header style={topbarStyle}>
+      {menuOpen ? (
+        <div style={mobileOverlayStyle} onClick={() => setMenuOpen(false)}>
+          <aside
+            style={mobileSidebarStyle}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setMenuOpen(false)}
+              style={mobileCloseButtonStyle}
+            >
+              ×
+            </button>
+
+            {SidebarContent}
+          </aside>
+        </div>
+      ) : null}
+
+      <main className="znr-main" style={mainStyle}>
+        <header className="znr-topbar" style={topbarStyle}>
+          <button
+            type="button"
+            className="znr-mobile-menu-button"
+            style={mobileMenuButtonStyle}
+            onClick={() => setMenuOpen(true)}
+          >
+            ☰
+          </button>
+
           <div>
             <div style={topbarLabelStyle}>Trenutni modul</div>
             <div style={topbarTitleStyle}>{getTitle()}</div>
@@ -193,7 +260,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <div style={contentStyle}>{children}</div>
+        <div className="znr-content" style={contentStyle}>
+          {children}
+        </div>
       </main>
     </div>
   );
@@ -374,7 +443,9 @@ const topbarTitleStyle: React.CSSProperties = {
 const topbarRightStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 14,
+  gap: 10,
+  flexWrap: "wrap",
+  justifyContent: "flex-end",
 };
 
 const notificationWrapStyle: React.CSSProperties = {
@@ -439,4 +510,53 @@ const contentStyle: React.CSSProperties = {
   padding: 24,
   maxWidth: 1400,
   margin: "0 auto",
+};
+
+const mobileMenuButtonStyle: React.CSSProperties = {
+  width: 44,
+  height: 44,
+  borderRadius: 12,
+  border: "1px solid #cbd5e1",
+  background: "white",
+  color: "#0f172a",
+  fontSize: 24,
+  fontWeight: 900,
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+};
+
+const mobileOverlayStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(15, 23, 42, 0.55)",
+  zIndex: 100,
+  display: "flex",
+};
+
+const mobileSidebarStyle: React.CSSProperties = {
+  width: "86%",
+  maxWidth: 310,
+  minHeight: "100vh",
+  background:
+    "linear-gradient(180deg, #0f2747 0%, #0b1b33 55%, #071426 100%)",
+  color: "white",
+  display: "flex",
+  flexDirection: "column",
+  position: "relative",
+  boxShadow: "8px 0 30px rgba(15, 23, 42, 0.35)",
+};
+
+const mobileCloseButtonStyle: React.CSSProperties = {
+  position: "absolute",
+  top: 14,
+  right: 14,
+  width: 36,
+  height: 36,
+  borderRadius: 999,
+  border: "none",
+  background: "rgba(255,255,255,0.12)",
+  color: "white",
+  fontSize: 26,
+  cursor: "pointer",
 };
