@@ -1027,7 +1027,7 @@ const importCsv = async () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,text/csv,.xlsx,.xls"
+                
                 style={inputStyle}
                 onChange={(e) => {
                   const file = e.target.files?.[0] || null;
@@ -1388,130 +1388,199 @@ const importCsv = async () => {
           {greska && <div style={errorBoxStyle}>{greska}</div>}
         </div>
 
-        <div style={cardStyle}>
-          <div style={tableHeaderStyle}>
-            <div>
-              <h2 style={{ ...sectionTitleStyle, marginBottom: 4 }}>
-                Popis radnika
-              </h2>
-              <div style={sectionSubtitleStyle}>
-                Pregled svih zapisa za ovu tvrtku.
+      <div style={cardStyle}>
+  <div style={tableHeaderStyle}>
+    <div>
+      <h2 style={{ ...sectionTitleStyle, marginBottom: 4 }}>
+        Popis radnika
+      </h2>
+      <div style={sectionSubtitleStyle}>
+        Pregled svih zapisa za ovu tvrtku.
+      </div>
+    </div>
+
+    <button style={grayButtonStyle} onClick={exportRadniciCsv}>
+      Izvoz CSV
+    </button>
+  </div>
+
+  <button
+    style={smallRedButtonStyle}
+    onClick={async () => {
+      if (!confirm("Obrisati SVE radnike ove tvrtke?")) return;
+
+      await fetch(`/api/radnici?firmaId=${firmaId}`, {
+        method: "DELETE",
+      });
+
+      await ucitajSve();
+    }}
+  >
+    Obriši sve radnike
+  </button>
+
+  <div className="desktop-only">
+    <div style={tableWrapStyle}>
+      <table style={tableStyle}>
+        <thead>
+          <tr style={{ background: "#f9fafb" }}>
+            <th style={thStyle}>Status</th>
+            <th style={thStyle}>Ime i prezime</th>
+            <th style={thStyle}>OIB</th>
+            <th style={thStyle}>Početak rada</th>
+            <th style={thStyle}>Radno mjesto</th>
+            <th style={thStyle}>Dozvola</th>
+            <th style={thStyle}>Akcije</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {filtriraniRadnici.length === 0 ? (
+            <tr>
+              <td colSpan={7} style={tdCenterStyle}>
+                Nema radnika za prikaz.
+              </td>
+            </tr>
+          ) : (
+            filtriraniRadnici.map((r) => (
+              <tr key={r.id}>
+                <td style={tdStyle}>
+                  <span
+                    style={{
+                      ...pillStyle,
+                      ...(r.aktivan ? activePillStyle : inactivePillStyle),
+                    }}
+                  >
+                    {r.aktivan ? "Aktivan" : "Neaktivan"}
+                  </span>
+                </td>
+
+                <td style={tdStyle}>
+                  <Link
+                    href={`/tvrtke/${firmaId}/radnici/${r.id}`}
+                    style={{
+                      color: "#2563eb",
+                      fontWeight: 800,
+                      textDecoration: "none",
+                    }}
+                  >
+                    {r.ime}
+                  </Link>
+                </td>
+
+                <td style={tdStyle}>{r.oib}</td>
+                <td style={tdStyle}>{formatDate(r.datumZaposlenja)}</td>
+                <td style={tdStyle}>{r.radnoMjesto || "-"}</td>
+
+                <td style={tdStyle}>
+                  {r.imaDozvolu ? (
+                    <span style={{ ...pillStyle, ...badgeStyle(r.dozvolaDo) }}>
+                      {statusRoka(r.dozvolaDo).text}
+                    </span>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+
+                <td style={tdStyle}>
+                  <div style={tableActionsStyle}>
+                    <button
+                      style={smallDarkButtonStyle}
+                      onClick={() => setDetalji(r)}
+                    >
+                      Detalji
+                    </button>
+
+                    <button
+                      style={smallGrayButtonStyle}
+                      onClick={() => pokreniUredenje(r)}
+                    >
+                      Uredi
+                    </button>
+
+                    <button
+                      style={smallRedButtonStyle}
+                      onClick={() => obrisiRadnika(r.id)}
+                    >
+                      Obriši
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div className="mobile-only">
+    <div style={{ display: "grid", gap: 14, marginTop: 16 }}>
+      {filtriraniRadnici.length === 0 ? (
+        <div style={tdCenterStyle}>Nema radnika za prikaz.</div>
+      ) : (
+        filtriraniRadnici.map((r) => (
+          <div
+            key={r.id}
+            style={{
+              border: "1px solid #e5e7eb",
+              borderRadius: 16,
+              padding: 14,
+              background: "#fff",
+              boxShadow: "0 8px 20px rgba(0,0,0,0.05)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>
+                  {r.ime}
+                </div>
+                <div style={{ fontSize: 13, color: "#64748b" }}>
+                  OIB: {r.oib}
+                </div>
+              </div>
+
+              <span
+                style={{
+                  ...pillStyle,
+                  ...(r.aktivan ? activePillStyle : inactivePillStyle),
+                }}
+              >
+                {r.aktivan ? "Aktivan" : "Neaktivan"}
+              </span>
+            </div>
+
+            <div style={{ marginTop: 10, fontSize: 14 }}>
+              <div>
+                <b>Početak rada:</b> {formatDate(r.datumZaposlenja)}
+              </div>
+              <div>
+                <b>Radno mjesto:</b> {r.radnoMjesto || "-"}
+              </div>
+              <div>
+                <b>Dozvola:</b> {r.imaDozvolu ? "Da" : "Ne"}
               </div>
             </div>
 
-            <button
-              style={grayButtonStyle}
-              onClick={exportRadniciCsv}
-            >
-              Izvoz CSV
-            </button>
+            <div style={{ display: "grid", gap: 6, marginTop: 12 }}>
+              <button style={smallDarkButtonStyle} onClick={() => setDetalji(r)}>
+                Detalji
+              </button>
+
+              <button style={smallGrayButtonStyle} onClick={() => pokreniUredenje(r)}>
+                Uredi
+              </button>
+
+              <button style={smallRedButtonStyle} onClick={() => obrisiRadnika(r.id)}>
+                Obriši
+              </button>
+            </div>
           </div>
-          <button
-  style={smallRedButtonStyle}
-  onClick={async () => {
-    if (!confirm("Obrisati SVE radnike ove tvrtke?")) return;
-
-    await fetch(`/api/radnici?firmaId=${firmaId}`, {
-      method: "DELETE",
-    });
-
-    await ucitajSve();
-  }}
->
-  Obriši sve radnike
-</button>
-
-          <div style={tableWrapStyle}>
-            <table style={tableStyle}>
-              <thead>
-                <tr style={{ background: "#f9fafb" }}>
-                  <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Ime i prezime</th>
-                  <th style={thStyle}>OIB</th>
-                  <th style={thStyle}>Početak rada</th>
-                  <th style={thStyle}>Radno mjesto</th>
-                  <th style={thStyle}>Dozvola</th>
-                  <th style={thStyle}>Akcije</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtriraniRadnici.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} style={tdCenterStyle}>
-                      Nema radnika za prikaz.
-                    </td>
-                  </tr>
-                ) : (
-                  filtriraniRadnici.map((r) => (
-                    <tr key={r.id}>
-                      <td style={tdStyle}>
-                        <span
-                          style={{
-                            ...pillStyle,
-                            ...(r.aktivan ? activePillStyle : inactivePillStyle),
-                          }}
-                        >
-                          {r.aktivan ? "Aktivan" : "Neaktivan"}
-                        </span>
-                      </td>
-                      <td style={tdStyle}>
-  <Link
-    href={`/tvrtke/${firmaId}/radnici/${r.id}`}
-    style={{
-      color: "#2563eb",
-      fontWeight: 800,
-      textDecoration: "none",
-    }}
-  >
-    {r.ime}
-  </Link>
-</td>
-                      <td style={tdStyle}>{r.oib}</td>
-                      <td style={tdStyle}>{formatDate(r.datumZaposlenja)}</td>
-                      <td style={tdStyle}>{r.radnoMjesto || "-"}</td>
-                      <td style={tdStyle}>
-                        {r.imaDozvolu ? (
-                          <span
-                            style={{
-                              ...pillStyle,
-                              ...badgeStyle(r.dozvolaDo),
-                            }}
-                          >
-                            {statusRoka(r.dozvolaDo).text}
-                          </span>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td style={tdStyle}>
-                        <div style={tableActionsStyle}>
-                          <button
-                            style={smallDarkButtonStyle}
-                            onClick={() => setDetalji(r)}
-                          >
-                            Detalji
-                          </button>
-                          <button
-                            style={smallGrayButtonStyle}
-                            onClick={() => pokreniUredenje(r)}
-                          >
-                            Uredi
-                          </button>
-                          <button
-                            style={smallRedButtonStyle}
-                            onClick={() => obrisiRadnika(r.id)}
-                          >
-                            Obriši
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        ))
+      )}
+    </div>
+  </div>
+</div>
 
         {detalji && (
           <div
