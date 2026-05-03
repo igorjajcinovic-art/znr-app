@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import * as XLSX from "xlsx";
 
 type Radnik = {
   id: string;
@@ -431,14 +432,66 @@ export default function RadniciTvrtkePage() {
   });
 };
 
-  const importCsv = async () => {
+  const readFileRows = async (file: File) => {
+  const name = file.name.toLowerCase();
+
+  // =====================
+  // EXCEL (.xlsx)
+  // =====================
+  if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+    const buffer = await file.arrayBuffer();
+
+    const workbook = XLSX.read(buffer, {
+      type: "array",
+    });
+
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    const rows = XLSX.utils.sheet_to_json<any>(sheet, {
+      defval: "",
+    });
+
+    return rows;
+  }
+
+  // =====================
+  // CSV
+  // =====================
+  const text = await file.text();
+
+  const lines = text
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) return [];
+
+  const delimiter =
+    lines[0].includes(";") && !lines[0].includes(",") ? ";" : ",";
+
+  const headers = lines[0].split(delimiter).map((h) => h.trim());
+
+  return lines.slice(1).map((line) => {
+    const cols = line.split(delimiter);
+
+    const obj: any = {};
+    headers.forEach((h, i) => {
+      obj[h] = cols[i];
+    });
+
+    return obj;
+  });
+};
+
+const importCsv = async () => {
   if (!firmaId) {
     alert("Nedostaje ID tvrtke.");
     return;
   }
 
   if (!csvFile) {
-    alert("Odaberi CSV file.");
+    alert("Odaberi CSV ili Excel file.");
     return;
   }
 
@@ -446,11 +499,10 @@ export default function RadniciTvrtkePage() {
     setImportanje(true);
     setGreska("");
 
-    const text = await csvFile.text();
-    const rows = readCsvRows(text);
+    const rows = await readFileRows(csvFile);
 
-    if (rows.length === 0) {
-      throw new Error("CSV nema podataka ili zaglavlje nije ispravno.");
+    if (!rows.length) {
+      throw new Error("Datoteka nema podataka.");
     }
 
     const res = await fetch("/api/radnici/import", {
@@ -466,7 +518,7 @@ export default function RadniciTvrtkePage() {
 
     if (!res.ok) {
       const txt = await res.text();
-      throw new Error(txt || "Greška kod uvoza CSV-a.");
+      throw new Error(txt || "Greška kod uvoza.");
     }
 
     const result = await res.json();
@@ -975,7 +1027,7 @@ export default function RadniciTvrtkePage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,text/csv,.xlsx,.xls"
                 style={inputStyle}
                 onChange={(e) => {
                   const file = e.target.files?.[0] || null;

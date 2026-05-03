@@ -2,13 +2,32 @@ import { prisma } from "@/lib/prisma";
 
 type Row = Record<string, unknown>;
 
-function get(row: Row, keys: string[]): string {
-  for (const key of keys) {
-    const value = row[key];
+function cleanText(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .replace(/^"+|"+$/g, "")
+    .trim();
+}
 
-    if (value !== undefined && value !== null && String(value).trim() !== "") {
-      return String(value).trim();
-    }
+function normalizeKey(value: string): string {
+  return value
+    .replace(/^"+|"+$/g, "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function get(row: Row, keys: string[]): string {
+  const normalizedRow: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(row)) {
+    normalizedRow[normalizeKey(key)] = cleanText(value);
+  }
+
+  for (const key of keys) {
+    const value = normalizedRow[normalizeKey(key)];
+    if (value) return value;
   }
 
   return "";
@@ -19,10 +38,20 @@ function cleanOib(value: string): string {
 }
 
 function parseDate(value: string): Date | null {
-  const v = value.trim();
+  const v = cleanText(value);
 
   if (!v) return null;
 
+  // Excel serial date, e.g. 43122
+  if (/^\d{4,6}$/.test(v)) {
+    const serial = Number(v);
+    const excelEpoch = Date.UTC(1899, 11, 30);
+    const date = new Date(excelEpoch + serial * 24 * 60 * 60 * 1000);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  // 23.01.2018
   const dot = v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\.?$/);
 
   if (dot) {
@@ -35,27 +64,31 @@ function parseDate(value: string): Date | null {
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
-  const iso = new Date(v);
-  return Number.isNaN(iso.getTime()) ? null : iso;
+  // 2018-01-23
+  const iso = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+
+  if (iso) {
+    const [, y, m, d] = iso;
+
+    const date = new Date(
+      `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T00:00:00.000Z`
+    );
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  return null;
 }
 
-function parseAktivan(value: string): boolean {
-  const v = value.trim().toLowerCase();
-
-  if (!v) return true;
-
-  return v === "da" || v === "aktivan" || v === "true" || v === "1";
-}
-
-function parseDaNe(value: string): boolean {
-  const v = value.trim().toLowerCase();
+function parseBool(value: string): boolean {
+  const v = cleanText(value).toLowerCase();
 
   return (
     v === "da" ||
+    v === "yes" ||
     v === "true" ||
     v === "1" ||
-    v === "yes" ||
-    v === "ima"
+    v === "aktivan"
   );
 }
 
@@ -88,81 +121,62 @@ export async function POST(req: Request) {
 
       const ime = get(row, [
         "ime",
-        "Ime",
-        "Ime i prezime",
         "ime i prezime",
-        "imePrezime",
+        "ime prezime",
+        "radnik",
       ]);
 
-      const oib = cleanOib(
-        get(row, [
-          "oib",
-          "OIB",
-          "Oib",
-        ])
-      );
+      const prezime = get(row, ["prezime"]);
+
+      const oib = cleanOib(get(row, ["oib"]));
+
+      const punoIme =
+        prezime && prezime !== oib ? `${ime} ${prezime}`.trim() : ime;
 
       const datumRaw = get(row, [
-        "datumZaposlenja",
-        "datum zaposlenja",
-        "Datum zaposlenja",
-        "Početak rada",
-        "početak rada",
-        "Pocetak rada",
         "pocetak rada",
-        "pocetakRada",
-        "početakRada",
+        "početak rada",
+        "datum zaposlenja",
+        "datum zaposljenja",
+        "zaposlenje",
         "datum",
-        "Datum",
       ]);
 
-      const aktivanRaw = get(row, [
-        "aktivan",
-        "Aktivan",
-        "status",
-        "Status",
-      ]);
+      const aktivanRaw = get(row, ["aktivan", "status"]);
 
       const radnoMjesto = get(row, [
-        "radnoMjesto",
-        "Radno mjesto",
         "radno mjesto",
+        "radno mj",
+        "posao",
       ]);
 
       const grad = get(row, [
         "grad",
-        "Grad",
-        "Grad / mjesto",
         "grad / mjesto",
-        "Grad mjesto",
+        "grad mjesto",
+        "mjesto",
       ]);
 
       const imaDozvoluRaw = get(row, [
-        "imaDozvolu",
-        "Ima radnu dozvolu",
         "ima radnu dozvolu",
-        "Radna dozvola",
         "radna dozvola",
-        "Dozvola",
         "dozvola",
+        "ima dozvolu",
       ]);
 
       const dozvolaDoRaw = get(row, [
-        "dozvolaDo",
-        "Dozvola do",
         "dozvola do",
-        "Radna dozvola do",
         "radna dozvola do",
       ]);
 
       const datumZaposlenja = parseDate(datumRaw);
-      const aktivan = parseAktivan(aktivanRaw);
-      const imaDozvolu = parseDaNe(imaDozvoluRaw);
+      const aktivan = parseBool(aktivanRaw);
+      const imaDozvolu = parseBool(imaDozvoluRaw);
       const dozvolaDo = imaDozvolu ? parseDate(dozvolaDoRaw) : null;
 
       const razlozi: string[] = [];
 
-      if (!ime) razlozi.push("nedostaje ime");
+      if (!punoIme) razlozi.push("nedostaje ime");
       if (!oib) razlozi.push("nedostaje OIB");
 
       if (oib && oib.length !== 11) {
@@ -188,7 +202,7 @@ export async function POST(req: Request) {
       await prisma.radnik.create({
         data: {
           firmaId,
-          ime,
+          ime: punoIme,
           oib,
           datumZaposlenja,
           aktivan,
@@ -211,7 +225,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("CSV IMPORT ERROR:", error);
 
-    return new Response("Greška kod uvoza CSV-a", {
+    return new Response("Greška kod uvoza CSV-a/Excela", {
       status: 500,
     });
   }
