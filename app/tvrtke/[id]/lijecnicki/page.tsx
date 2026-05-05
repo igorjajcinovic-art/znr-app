@@ -646,6 +646,20 @@ export default function LijecnickiPage() {
             </div>
           )}
         </div>
+        <button
+  style={smallRedButtonStyle}
+  onClick={async () => {
+    if (!confirm("Obrisati SVE liječničke preglede?")) return;
+
+    await fetch(`/api/lijecnicki?firmaId=${firmaId}`, {
+      method: "DELETE",
+    });
+
+    await ucitajSve();
+  }}
+>
+  Obriši sve liječničke
+</button>
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>Upozorenja</h2>

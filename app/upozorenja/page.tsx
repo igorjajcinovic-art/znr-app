@@ -219,18 +219,16 @@ export default function UpozorenjaPage() {
     return null;
   };
 
-  const nadjiRadnika = (oib: string, firmaId: string) => {
-    const aktivan = radnici.find(
-      (r) => r.oib === oib && r.firmaId === firmaId && r.aktivan
-    );
-    if (aktivan) return aktivan;
-
-    return radnici.find((r) => r.oib === oib && r.firmaId === firmaId) || null;
-  };
+  const nadjiAktivnogRadnika = (oib: string, firmaId: string) => {
+  return (
+    radnici.find((r) => r.oib === oib && r.firmaId === firmaId && r.aktivan) ||
+    null
+  );
+};
 
   const upozorenjaDozvole = useMemo<UpozorenjeItem[]>(() => {
     return radnici
-      .filter((r) => r.imaDozvolu && r.dozvolaDo)
+      .filter((r) => r.aktivan && r.imaDozvolu && r.dozvolaDo)
       .map((r) => {
         const s = getStatus(r.dozvolaDo);
         if (!s) return null;
@@ -268,7 +266,8 @@ export default function UpozorenjaPage() {
         if (!s) return null;
 
         const tvrtka = tvrtke.find((t) => t.id === l.firmaId);
-        const radnik = nadjiRadnika(l.oib, l.firmaId);
+        const radnik = nadjiAktivnogRadnika(l.oib, l.firmaId);
+if (!radnik) return null;
 
         return {
           id: l.id,
@@ -301,7 +300,8 @@ export default function UpozorenjaPage() {
         if (!s) return null;
 
         const tvrtka = tvrtke.find((t) => t.id === o.firmaId);
-        const radnik = nadjiRadnika(o.oib, o.firmaId);
+        const radnik = nadjiAktivnogRadnika(o.oib, o.firmaId);
+if (!radnik) return null;
 
         return {
           id: o.id,

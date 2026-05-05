@@ -113,3 +113,26 @@ export async function POST(req: Request) {
     return new Response("Ne mogu spremiti liječnički pregled.", { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const firmaId = searchParams.get("firmaId");
+
+    if (!firmaId) {
+      return new Response("Nedostaje firmaId.", { status: 400 });
+    }
+
+    await prisma.lijecnickiPregled.deleteMany({
+      where: { firmaId },
+    });
+
+    return Response.json({ ok: true });
+  } catch (error) {
+    console.error("DELETE LIJECNICKI ERROR:", error);
+
+    return new Response("Greška kod brisanja.", {
+      status: 500,
+    });
+  }
+}

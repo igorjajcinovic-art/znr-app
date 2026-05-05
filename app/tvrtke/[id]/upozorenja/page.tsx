@@ -253,10 +253,14 @@ export default function UpozorenjaTvrtkePage() {
     return `Za ${diff} dana`;
   };
 
-  const nazivRadnikaPoOib = (oib: string) => {
-    const radnik = radnici.find((r) => r.oib === oib);
-    return radnik ? radnik.ime : oib || "-";
-  };
+  const aktivniRadnikPoOib = (oib: string) => {
+  return radnici.find((r) => r.oib === oib && r.aktivan) || null;
+};
+
+const nazivRadnikaPoOib = (oib: string) => {
+  const radnik = aktivniRadnikPoOib(oib);
+  return radnik ? radnik.ime : oib || "-";
+};
 
   const nazivRadnikaPoId = (id: string | null) => {
     if (!id) return "-";
@@ -309,9 +313,12 @@ export default function UpozorenjaTvrtkePage() {
     });
 
     lijecnicki.forEach((item) => {
-      const diff = daysUntil(item.vrijediDo);
+  const radnik = aktivniRadnikPoOib(item.oib);
+  if (!radnik) return;
 
-      result.push({
+  const diff = daysUntil(item.vrijediDo);
+
+  result.push({
         id: `lijecnicki-${item.id}`,
         grupa: "Liječnički",
         naslov: nazivRadnikaPoOib(item.oib),
