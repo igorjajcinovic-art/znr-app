@@ -1,196 +1,629 @@
-"use client";
-
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 
-type Radnik = {
-  id: string;
-  ime: string;
-  oib: string;
-  aktivan: boolean;
-  radnoMjesto: string | null;
+export const dynamic = "force-dynamic";
+
+type PageProps = {
+  params: Promise<{
+    id: string;
+    radnikId: string;
+  }>;
 };
 
-type Lijecnicki = {
-  id: string;
-  oib: string;
-  vrsta: string | null;
-  vrijediDo: string;
-};
+type Status = "ok" | "warning" | "expired" | "muted";
 
-type Osposobljavanje = {
-  id: string;
-  oib: string;
-  vrsta: string;
-  vrijediDo: string;
-};
+function startOfToday() {
+  const today = new Date();
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+}
 
-type Ozo = {
-  id: string;
-  oib: string;
-  vrsta: string;
-  rokZamjene: string | null;
-};
+function daysUntil(date: Date | null) {
+  if (!date) return null;
 
-export default function RadnikDetaljPage() {
-  const params = useParams();
+  const today = startOfToday();
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-  const firmaId = String(
-    Array.isArray(params.id) ? params.id[0] : params.id
-  );
-  const radnikId = String(
-    Array.isArray(params.radnikId)
-      ? params.radnikId[0]
-      : params.radnikId
-  );
+  return Math.ceil((target.getTime() - today.getTime()) / 86400000);
+}
 
-  const [radnik, setRadnik] = useState<Radnik | null>(null);
-  const [lijecnicki, setLijecnicki] = useState<Lijecnicki[]>([]);
-  const [osposobljavanja, setOsposobljavanja] = useState<
-    Osposobljavanje[]
-  >([]);
-  const [ozo, setOzo] = useState<Ozo[]>([]);
+function statusFromDate(date: Date | null): Status {
+  const diff = daysUntil(date);
 
-  const [loading, setLoading] = useState(true);
-  const [greska, setGreska] = useState("");
+  if (diff === null) return "muted";
+  if (diff < 0) return "expired";
+  if (diff <= 30) return "warning";
+  return "ok";
+}
 
-  useEffect(() => {
-    ucitaj();
-  }, []);
+function statusText(date: Date | null) {
+  const diff = daysUntil(date);
 
-  const ucitaj = async () => {
-    try {
-      setLoading(true);
+  if (diff === null) return "Nema roka";
+  if (diff < 0) return `Isteklo prije ${Math.abs(diff)} dana`;
+  if (diff === 0) return "Istječe danas";
+  if (diff === 1) return "Istječe sutra";
+  return `Istječe za ${diff} dana`;
+}
 
-      const radniciRes = await fetch(
-        `/api/radnici?firmaId=${firmaId}`
-      );
-      const lijecnickiRes = await fetch(
-        `/api/lijecnicki?firmaId=${firmaId}`
-      );
-      const osposobljavanjaRes = await fetch(
-        `/api/osposobljavanja?firmaId=${firmaId}`
-      );
-      const ozoRes = await fetch(`/api/oprema?firmaId=${firmaId}`);
+function formatDate(date: Date | null) {
+  if (!date) return "-";
 
-      const radnici: Radnik[] = await radniciRes.json();
-      const radnikData = radnici.find((r) => r.id === radnikId);
+  return new Intl.DateTimeFormat("hr-HR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
 
-      if (!radnikData) throw new Error("Radnik nije pronađen");
+function statusStyle(status: Status) {
+  if (status === "expired") return { ...pillStyle, ...expiredPillStyle };
+  if (status === "warning") return { ...pillStyle, ...warningPillStyle };
+  if (status === "ok") return { ...pillStyle, ...okPillStyle };
+  return { ...pillStyle, ...mutedPillStyle };
+}
 
-      setRadnik(radnikData);
+export default async function RadnikDetaljPage({ params }: PageProps) {
+  const { id: firmaId, radnikId } = await params;
 
-      const oib = radnikData.oib;
+  const [tvrtka, radnik] = await Promise.all([
+    prisma.tvrtka.findUnique({ where: { id: firmaId } }),
+    prisma.radnik.findFirst({
+      where: {
+        id: radnikId,
+        firmaId,
+      },
+    }),
+  ]);
 
-      const lij: Lijecnicki[] = await lijecnickiRes.json();
-      const osp: Osposobljavanje[] = await osposobljavanjaRes.json();
-      const oz: Ozo[] = await ozoRes.json();
+  if (!tvrtka || !radnik) notFound();
 
-      setLijecnicki(lij.filter((x) => x.oib === oib));
-      setOsposobljavanja(osp.filter((x) => x.oib === oib));
-      setOzo(oz.filter((x) => x.oib === oib));
-    } catch (e) {
-      setGreska(e instanceof Error ? e.message : "Greška pri učitavanju.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [lijecnicki, osposobljavanja, ozo] = await Promise.all([
+    prisma.lijecnickiPregled.findMany({
+      where: {
+        firmaId,
+        oib: radnik.oib,
+      },
+      orderBy: [{ vrijediDo: "asc" }, { createdAt: "desc" }],
+    }),
+    prisma.strucnoOsposobljavanje.findMany({
+      where: {
+        firmaId,
+        oib: radnik.oib,
+      },
+      orderBy: [{ vrijediDo: "asc" }, { createdAt: "desc" }],
+    }),
+    prisma.oprema.findMany({
+      where: {
+        firmaId,
+        oib: radnik.oib,
+      },
+      orderBy: [{ rokZamjene: "asc" }, { createdAt: "desc" }],
+    }),
+  ]);
 
-  const daysUntil = (date: string | null) => {
-    if (!date) return null;
-    const d = new Date(date);
-    const t = new Date();
-    return Math.ceil((d.getTime() - t.getTime()) / 86400000);
-  };
+  const otvoreniRokovi = [
+    radnik.imaDozvolu ? statusFromDate(radnik.dozvolaDo) : "muted",
+    ...lijecnicki.map((item) => statusFromDate(item.vrijediDo)),
+    ...osposobljavanja.map((item) => statusFromDate(item.vrijediDo)),
+    ...ozo.map((item) => statusFromDate(item.rokZamjene)),
+  ];
 
-  if (loading) return <div style={page}>Učitavanje...</div>;
-  if (greska) return <div style={page}>{greska}</div>;
-  if (!radnik) return null;
+  const kriticno = otvoreniRokovi.filter((status) => status === "expired").length;
+  const uskoro = otvoreniRokovi.filter((status) => status === "warning").length;
+
+  const ukupniStatus: Status = !radnik.aktivan
+    ? "muted"
+    : kriticno > 0
+    ? "expired"
+    : uskoro > 0
+    ? "warning"
+    : "ok";
 
   return (
-    <div style={page}>
-      <Link href={`/tvrtke/${firmaId}/radnici`}>← Natrag</Link>
+    <div style={pageStyle}>
+      <div style={topNavStyle}>
+        <Link href={`/tvrtke/${firmaId}/radnici`} style={backLinkStyle}>
+          Nazad na radnike
+        </Link>
+        <Link href={`/tvrtke/${firmaId}`} style={plainLinkStyle}>
+          {tvrtka.naziv}
+        </Link>
+      </div>
 
-      <h1>{radnik.ime}</h1>
-      <p>OIB: {radnik.oib}</p>
-      <p>Radno mjesto: {radnik.radnoMjesto || "-"}</p>
+      <section style={heroStyle}>
+        <div style={avatarStyle}>{radnik.ime.slice(0, 2).toUpperCase()}</div>
 
-      <Section title="Liječnički">
-        {lijecnicki.map((l) => (
-          <Item
-            key={l.id}
-            naziv={l.vrsta || "Pregled"}
-            datum={l.vrijediDo}
-            diff={daysUntil(l.vrijediDo)}
-          />
-        ))}
-      </Section>
+        <div style={heroMainStyle}>
+          <div style={eyebrowStyle}>Profil radnika</div>
+          <h1 style={titleStyle}>{radnik.ime}</h1>
+          <div style={subtitleStyle}>
+            {radnik.radnoMjesto || "Radno mjesto nije upisano"} · OIB {radnik.oib}
+          </div>
+        </div>
 
-      <Section title="Osposobljavanja">
-        {osposobljavanja.map((o) => (
-          <Item
-            key={o.id}
-            naziv={o.vrsta}
-            datum={o.vrijediDo}
-            diff={daysUntil(o.vrijediDo)}
-          />
-        ))}
-      </Section>
+        <div style={statusStyle(ukupniStatus)}>
+          {!radnik.aktivan
+            ? "Neaktivan"
+            : ukupniStatus === "expired"
+            ? "Ima isteklih rokova"
+            : ukupniStatus === "warning"
+            ? "Rokovi uskoro"
+            : "Uredno"}
+        </div>
+      </section>
 
-      <Section title="OZO">
-        {ozo.map((o) => (
-          <Item
-            key={o.id}
-            naziv={o.vrsta}
-            datum={o.rokZamjene}
-            diff={daysUntil(o.rokZamjene)}
-          />
-        ))}
-      </Section>
+      <section style={statsGridStyle}>
+        <Metric label="Liječnički" value={lijecnicki.length} />
+        <Metric label="Osposobljavanja" value={osposobljavanja.length} />
+        <Metric label="OZO stavke" value={ozo.length} />
+        <Metric label="Upozorenja" value={kriticno + uskoro} tone={kriticno > 0 ? "danger" : uskoro > 0 ? "warning" : "ok"} />
+      </section>
+
+      <section style={mainGridStyle}>
+        <div style={panelStyle}>
+          <h2 style={panelTitleStyle}>Osnovni podaci</h2>
+          <div style={detailsGridStyle}>
+            <Detail label="Tvrtka" value={tvrtka.naziv} />
+            <Detail label="Status" value={radnik.aktivan ? "Aktivan" : "Neaktivan"} />
+            <Detail label="Datum zaposlenja" value={formatDate(radnik.datumZaposlenja)} />
+            <Detail label="Datum odjave" value={formatDate(radnik.datumOdjave)} />
+            <Detail label="Datum rođenja" value={formatDate(radnik.datumRodjenja)} />
+            <Detail label="Grad / mjesto" value={radnik.grad || "-"} />
+            <Detail label="Radno mjesto" value={radnik.radnoMjesto || "-"} />
+            <Detail label="OIB" value={radnik.oib} />
+          </div>
+        </div>
+
+        <div style={panelStyle}>
+          <h2 style={panelTitleStyle}>Dozvole i osposobljenost</h2>
+          <div style={timelineStyle}>
+            <TimelineItem
+              title="Radna dozvola"
+              detail={radnik.imaDozvolu ? statusText(radnik.dozvolaDo) : "Nije označeno da ima dozvolu"}
+              date={formatDate(radnik.dozvolaDo)}
+              status={radnik.imaDozvolu ? statusFromDate(radnik.dozvolaDo) : "muted"}
+            />
+            <TimelineItem
+              title="ZNR osposobljen"
+              detail={radnik.znrOsposobljen ? "Osposobljen" : "Nije osposobljen"}
+              date={formatDate(radnik.znrDatum)}
+              status={radnik.znrOsposobljen ? "ok" : "muted"}
+            />
+            <TimelineItem
+              title="ZOP osposobljen"
+              detail={radnik.zopOsposobljen ? "Osposobljen" : "Nije osposobljen"}
+              date={formatDate(radnik.zopDatum)}
+              status={radnik.zopOsposobljen ? "ok" : "muted"}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section style={recordsGridStyle}>
+        <RecordPanel
+          title="Liječnički pregledi"
+          empty="Nema liječničkih pregleda."
+        >
+          {lijecnicki.map((item) => (
+            <RecordRow
+              key={item.id}
+              title={item.vrsta || "Pregled"}
+              meta={item.napomena || "Bez napomene"}
+              dateLabel="Vrijedi do"
+              date={item.vrijediDo}
+              status={statusFromDate(item.vrijediDo)}
+            />
+          ))}
+        </RecordPanel>
+
+        <RecordPanel
+          title="Osposobljavanja"
+          empty="Nema osposobljavanja."
+        >
+          {osposobljavanja.map((item) => (
+            <RecordRow
+              key={item.id}
+              title={item.vrsta}
+              meta={item.napomena || `Datum: ${formatDate(item.datum)}`}
+              dateLabel="Vrijedi do"
+              date={item.vrijediDo}
+              status={statusFromDate(item.vrijediDo)}
+            />
+          ))}
+        </RecordPanel>
+
+        <RecordPanel title="OZO oprema" empty="Nema zadužene OZO opreme.">
+          {ozo.map((item) => (
+            <RecordRow
+              key={item.id}
+              title={item.vrsta}
+              meta={`Količina: ${item.kolicina}${item.napomena ? ` · ${item.napomena}` : ""}`}
+              dateLabel="Rok zamjene"
+              date={item.rokZamjene}
+              status={statusFromDate(item.rokZamjene)}
+            />
+          ))}
+        </RecordPanel>
+      </section>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div style={{ marginTop: 20 }}>
-      <h2>{title}</h2>
-      {children}
-    </div>
-  );
-}
-
-function Item({
-  naziv,
-  datum,
-  diff,
+function Metric({
+  label,
+  value,
+  tone,
 }: {
-  naziv: string;
-  datum: string | null;
-  diff: number | null;
+  label: string;
+  value: number;
+  tone?: "danger" | "warning" | "ok";
 }) {
   return (
-    <div
-      style={{
-        padding: 10,
-        marginBottom: 8,
-        border: "1px solid #ccc",
-        borderRadius: 8,
-        background:
-          diff !== null && diff < 0
-            ? "#fee2e2"
-            : diff !== null && diff < 7
-            ? "#fef3c7"
-            : "#f9fafb",
-      }}
-    >
-      <strong>{naziv}</strong>
-      <div>{datum}</div>
+    <div style={metricStyle}>
+      <div style={metricLabelStyle}>{label}</div>
+      <div
+        style={{
+          ...metricValueStyle,
+          ...(tone === "danger" ? dangerTextStyle : {}),
+          ...(tone === "warning" ? warningTextStyle : {}),
+          ...(tone === "ok" ? okTextStyle : {}),
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
 }
 
-const page = {
-  padding: 20,
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={detailStyle}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function TimelineItem({
+  title,
+  detail,
+  date,
+  status,
+}: {
+  title: string;
+  detail: string;
+  date: string;
+  status: Status;
+}) {
+  return (
+    <div style={timelineItemStyle}>
+      <div>
+        <div style={recordTitleStyle}>{title}</div>
+        <div style={recordMetaStyle}>{detail}</div>
+      </div>
+      <div style={timelineRightStyle}>
+        <span style={statusStyle(status)}>{status === "ok" ? "Uredno" : status === "warning" ? "Uskoro" : status === "expired" ? "Isteklo" : "Info"}</span>
+        <span style={dateStyle}>{date}</span>
+      </div>
+    </div>
+  );
+}
+
+function RecordPanel({
+  title,
+  empty,
+  children,
+}: {
+  title: string;
+  empty: string;
+  children: React.ReactNode;
+}) {
+  const items = Array.isArray(children) ? children.filter(Boolean) : children;
+  const isEmpty = Array.isArray(items) ? items.length === 0 : !items;
+
+  return (
+    <div style={panelStyle}>
+      <h2 style={panelTitleStyle}>{title}</h2>
+      <div style={recordsListStyle}>
+        {isEmpty ? <div style={emptyStyle}>{empty}</div> : children}
+      </div>
+    </div>
+  );
+}
+
+function RecordRow({
+  title,
+  meta,
+  dateLabel,
+  date,
+  status,
+}: {
+  title: string;
+  meta: string;
+  dateLabel: string;
+  date: Date | null;
+  status: Status;
+}) {
+  return (
+    <div style={recordRowStyle}>
+      <div style={recordMainStyle}>
+        <div style={recordTitleStyle}>{title}</div>
+        <div style={recordMetaStyle}>{meta}</div>
+      </div>
+      <div style={recordDateStyle}>
+        <span>{dateLabel}</span>
+        <strong>{formatDate(date)}</strong>
+        <em>{statusText(date)}</em>
+      </div>
+      <span style={statusStyle(status)}>
+        {status === "ok"
+          ? "Uredno"
+          : status === "warning"
+          ? "Uskoro"
+          : status === "expired"
+          ? "Isteklo"
+          : "Info"}
+      </span>
+    </div>
+  );
+}
+
+const pageStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 18,
+};
+
+const topNavStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
+const backLinkStyle: React.CSSProperties = {
+  color: "#0f766e",
+  textDecoration: "none",
+  fontWeight: 900,
+};
+
+const plainLinkStyle: React.CSSProperties = {
+  color: "#64748b",
+  textDecoration: "none",
+  fontWeight: 800,
+};
+
+const heroStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  alignItems: "center",
+  gap: 18,
+  padding: 22,
+  borderRadius: 8,
+  background: "#ffffff",
+  border: "1px solid #e2e8f0",
+  boxShadow: "0 12px 30px rgba(15, 23, 42, 0.06)",
+};
+
+const avatarStyle: React.CSSProperties = {
+  width: 72,
+  height: 72,
+  borderRadius: 8,
+  background: "#0f2747",
+  color: "#6ee7b7",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: 24,
+  fontWeight: 900,
+};
+
+const heroMainStyle: React.CSSProperties = {
+  minWidth: 0,
+};
+
+const eyebrowStyle: React.CSSProperties = {
+  color: "#0f766e",
+  fontSize: 12,
+  fontWeight: 900,
+  textTransform: "uppercase",
+};
+
+const titleStyle: React.CSSProperties = {
+  margin: "5px 0 7px",
+  fontSize: 34,
+  lineHeight: 1.1,
+  color: "#0f172a",
+};
+
+const subtitleStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 15,
+};
+
+const statsGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+  gap: 12,
+};
+
+const metricStyle: React.CSSProperties = {
+  minHeight: 100,
+  padding: 16,
+  borderRadius: 8,
+  background: "#ffffff",
+  border: "1px solid #e2e8f0",
+  display: "grid",
+  alignContent: "space-between",
+};
+
+const metricLabelStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 13,
+  fontWeight: 800,
+};
+
+const metricValueStyle: React.CSSProperties = {
+  fontSize: 34,
+  lineHeight: 1,
+  fontWeight: 900,
+  color: "#0f172a",
+};
+
+const dangerTextStyle: React.CSSProperties = {
+  color: "#dc2626",
+};
+
+const warningTextStyle: React.CSSProperties = {
+  color: "#b45309",
+};
+
+const okTextStyle: React.CSSProperties = {
+  color: "#0f766e",
+};
+
+const mainGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+  gap: 18,
+};
+
+const recordsGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+  gap: 18,
+};
+
+const panelStyle: React.CSSProperties = {
+  background: "#ffffff",
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  padding: 18,
+  boxShadow: "0 12px 30px rgba(15, 23, 42, 0.05)",
+};
+
+const panelTitleStyle: React.CSSProperties = {
+  margin: "0 0 14px",
+  fontSize: 18,
+  color: "#0f172a",
+};
+
+const detailsGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+  gap: 12,
+};
+
+const detailStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 5,
+  padding: 12,
+  borderRadius: 8,
+  background: "#f8fafc",
+  color: "#334155",
+};
+
+const timelineStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+};
+
+const timelineItemStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
+  gap: 12,
+  alignItems: "center",
+  padding: "12px 0",
+  borderTop: "1px solid #eef2f7",
+};
+
+const timelineRightStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  flexWrap: "wrap",
+  justifyContent: "flex-end",
+};
+
+const recordsListStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+};
+
+const recordRowStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gap: 12,
+  alignItems: "center",
+  padding: "12px 0",
+  borderTop: "1px solid #eef2f7",
+};
+
+const recordMainStyle: React.CSSProperties = {
+  minWidth: 0,
+};
+
+const recordTitleStyle: React.CSSProperties = {
+  color: "#0f172a",
+  fontWeight: 900,
+};
+
+const recordMetaStyle: React.CSSProperties = {
+  marginTop: 4,
+  color: "#64748b",
+  fontSize: 13,
+};
+
+const recordDateStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 3,
+  textAlign: "right",
+  color: "#64748b",
+  fontSize: 12,
+};
+
+const dateStyle: React.CSSProperties = {
+  color: "#475569",
+  fontSize: 13,
+  fontWeight: 800,
+};
+
+const pillStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: 72,
+  padding: "6px 9px",
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: 900,
+  whiteSpace: "nowrap",
+};
+
+const okPillStyle: React.CSSProperties = {
+  background: "#dcfce7",
+  color: "#166534",
+};
+
+const warningPillStyle: React.CSSProperties = {
+  background: "#fef3c7",
+  color: "#92400e",
+};
+
+const expiredPillStyle: React.CSSProperties = {
+  background: "#fee2e2",
+  color: "#991b1b",
+};
+
+const mutedPillStyle: React.CSSProperties = {
+  background: "#e2e8f0",
+  color: "#475569",
+};
+
+const emptyStyle: React.CSSProperties = {
+  padding: 14,
+  borderRadius: 8,
+  background: "#f8fafc",
+  color: "#64748b",
+  fontWeight: 700,
 };
