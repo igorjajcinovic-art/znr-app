@@ -49,34 +49,36 @@ const prazniPodaci: StrucnoOsposobljavanje = {
 };
 
 export default function OsposobljavanjaPage() {
-  const [radnici, setRadnici] = useState<Radnik[]>([]);
-  const [zapisi, setZapisi] = useState<StrucnoOsposobljavanje[]>([]);
+  const [radnici] = useState<Radnik[]>(() => {
+    if (typeof window === "undefined") return [];
+
+    const spremljeniRadnici = localStorage.getItem("radnici");
+    if (!spremljeniRadnici) return [];
+
+    try {
+      return JSON.parse(spremljeniRadnici) as Radnik[];
+    } catch {
+      return [];
+    }
+  });
+  const [zapisi, setZapisi] = useState<StrucnoOsposobljavanje[]>(() => {
+    if (typeof window === "undefined") return [];
+
+    const spremljenaOsposobljavanja = localStorage.getItem("osposobljavanja");
+    if (!spremljenaOsposobljavanja) return [];
+
+    try {
+      return JSON.parse(spremljenaOsposobljavanja) as StrucnoOsposobljavanje[];
+    } catch {
+      return [];
+    }
+  });
   const [forma, setForma] = useState<StrucnoOsposobljavanje>(prazniPodaci);
   const [detalji, setDetalji] = useState<StrucnoOsposobljavanje | null>(null);
 
   const [filterOib, setFilterOib] = useState("");
   const [filterVrsta, setFilterVrsta] = useState("");
   const [samoUpozorenja, setSamoUpozorenja] = useState(false);
-
-  useEffect(() => {
-    const spremljeniRadnici = localStorage.getItem("radnici");
-    if (spremljeniRadnici) {
-      try {
-        setRadnici(JSON.parse(spremljeniRadnici));
-      } catch {
-        setRadnici([]);
-      }
-    }
-
-    const spremljenaOsposobljavanja = localStorage.getItem("osposobljavanja");
-    if (spremljenaOsposobljavanja) {
-      try {
-        setZapisi(JSON.parse(spremljenaOsposobljavanja));
-      } catch {
-        setZapisi([]);
-      }
-    }
-  }, []);
 
   useEffect(() => {
     localStorage.setItem("osposobljavanja", JSON.stringify(zapisi));

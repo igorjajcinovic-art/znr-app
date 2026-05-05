@@ -390,9 +390,9 @@ export default function RadniciTvrtkePage() {
       return String(cols[index] ?? "").trim();
     };
 
-    let ime = get(idxIme);
+    const ime = get(idxIme);
 
-    let prezime =
+    const prezime =
       idxPrezime >= 0
         ? get(idxPrezime)
         : idxIme >= 0
@@ -447,7 +447,7 @@ export default function RadniciTvrtkePage() {
 
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-    const rows = XLSX.utils.sheet_to_json<any>(sheet, {
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
       defval: "",
     });
 
@@ -475,7 +475,7 @@ export default function RadniciTvrtkePage() {
   return lines.slice(1).map((line) => {
     const cols = line.split(delimiter);
 
-    const obj: any = {};
+    const obj: Record<string, string | undefined> = {};
     headers.forEach((h, i) => {
       obj[h] = cols[i];
     });

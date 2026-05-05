@@ -48,34 +48,36 @@ const prazniPodaci: LijecnickiPregled = {
 };
 
 export default function LijecnickiPage() {
-  const [radnici, setRadnici] = useState<Radnik[]>([]);
-  const [pregledi, setPregledi] = useState<LijecnickiPregled[]>([]);
+  const [radnici] = useState<Radnik[]>(() => {
+    if (typeof window === "undefined") return [];
+
+    const spremljeniRadnici = localStorage.getItem("radnici");
+    if (!spremljeniRadnici) return [];
+
+    try {
+      return JSON.parse(spremljeniRadnici) as Radnik[];
+    } catch {
+      return [];
+    }
+  });
+  const [pregledi, setPregledi] = useState<LijecnickiPregled[]>(() => {
+    if (typeof window === "undefined") return [];
+
+    const spremljeniPregledi = localStorage.getItem("lijecnicki-pregledi");
+    if (!spremljeniPregledi) return [];
+
+    try {
+      return JSON.parse(spremljeniPregledi) as LijecnickiPregled[];
+    } catch {
+      return [];
+    }
+  });
   const [forma, setForma] = useState<LijecnickiPregled>(prazniPodaci);
   const [detalji, setDetalji] = useState<LijecnickiPregled | null>(null);
 
   const [filterOib, setFilterOib] = useState("");
   const [filterTocke, setFilterTocke] = useState("");
   const [samoUpozorenja, setSamoUpozorenja] = useState(false);
-
-  useEffect(() => {
-    const spremljeniRadnici = localStorage.getItem("radnici");
-    if (spremljeniRadnici) {
-      try {
-        setRadnici(JSON.parse(spremljeniRadnici));
-      } catch {
-        setRadnici([]);
-      }
-    }
-
-    const spremljeniPregledi = localStorage.getItem("lijecnicki-pregledi");
-    if (spremljeniPregledi) {
-      try {
-        setPregledi(JSON.parse(spremljeniPregledi));
-      } catch {
-        setPregledi([]);
-      }
-    }
-  }, []);
 
   useEffect(() => {
     localStorage.setItem("lijecnicki-pregledi", JSON.stringify(pregledi));

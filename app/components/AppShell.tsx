@@ -11,24 +11,29 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    ucitajBrojUpozorenja();
-    setMenuOpen(false);
-  }, [pathname]);
+    let active = true;
 
-  const ucitajBrojUpozorenja = async () => {
-    try {
-      const res = await fetch("/api/upozorenja/count", {
-        cache: "no-store",
-      });
+    async function ucitajBrojUpozorenja() {
+      try {
+        const res = await fetch("/api/upozorenja/count", {
+          cache: "no-store",
+        });
 
-      if (!res.ok) return;
+        if (!res.ok || !active) return;
 
-      const data = await res.json();
-      setBrojUpozorenja(Number(data.ukupno || 0));
-    } catch {
-      setBrojUpozorenja(0);
+        const data = await res.json();
+        setBrojUpozorenja(Number(data.ukupno || 0));
+      } catch {
+        if (active) setBrojUpozorenja(0);
+      }
     }
-  };
+
+    ucitajBrojUpozorenja();
+
+    return () => {
+      active = false;
+    };
+  }, [pathname]);
 
   const odjava = async () => {
     await fetch("/api/auth/logout", {
@@ -137,6 +142,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <Link
               key={item.label}
               href={item.href}
+              onClick={() => setMenuOpen(false)}
               style={{
                 ...navItemStyle,
                 ...(active ? navItemActiveStyle : {}),

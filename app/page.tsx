@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Page() {
   return (
     <div style={{ padding: 40 }}>
@@ -5,7 +7,7 @@ export default function Page() {
 
       <p>Radi 🎉</p>
 
-      <a href="/tvrtke">Idi na tvrtke</a>
+      <Link href="/tvrtke">Idi na tvrtke</Link>
     </div>
   );
 }

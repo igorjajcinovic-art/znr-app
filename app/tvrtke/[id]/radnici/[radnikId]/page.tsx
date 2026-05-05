@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 type Radnik = {
   id: string;
@@ -74,8 +74,8 @@ export default function RadnikDetaljPage() {
       );
       const ozoRes = await fetch(`/api/oprema?firmaId=${firmaId}`);
 
-      const radnici = await radniciRes.json();
-      const radnikData = radnici.find((r: Radnik) => r.id === radnikId);
+      const radnici: Radnik[] = await radniciRes.json();
+      const radnikData = radnici.find((r) => r.id === radnikId);
 
       if (!radnikData) throw new Error("Radnik nije pronađen");
 
@@ -83,15 +83,15 @@ export default function RadnikDetaljPage() {
 
       const oib = radnikData.oib;
 
-      const lij = await lijecnickiRes.json();
-      const osp = await osposobljavanjaRes.json();
-      const oz = await ozoRes.json();
+      const lij: Lijecnicki[] = await lijecnickiRes.json();
+      const osp: Osposobljavanje[] = await osposobljavanjaRes.json();
+      const oz: Ozo[] = await ozoRes.json();
 
-      setLijecnicki(lij.filter((x: any) => x.oib === oib));
-      setOsposobljavanja(osp.filter((x: any) => x.oib === oib));
-      setOzo(oz.filter((x: any) => x.oib === oib));
-    } catch (e: any) {
-      setGreska(e.message);
+      setLijecnicki(lij.filter((x) => x.oib === oib));
+      setOsposobljavanja(osp.filter((x) => x.oib === oib));
+      setOzo(oz.filter((x) => x.oib === oib));
+    } catch (e) {
+      setGreska(e instanceof Error ? e.message : "Greška pri učitavanju.");
     } finally {
       setLoading(false);
     }
@@ -152,7 +152,7 @@ export default function RadnikDetaljPage() {
   );
 }
 
-function Section({ title, children }: any) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div style={{ marginTop: 20 }}>
       <h2>{title}</h2>
@@ -161,7 +161,15 @@ function Section({ title, children }: any) {
   );
 }
 
-function Item({ naziv, datum, diff }: any) {
+function Item({
+  naziv,
+  datum,
+  diff,
+}: {
+  naziv: string;
+  datum: string | null;
+  diff: number | null;
+}) {
   return (
     <div
       style={{
