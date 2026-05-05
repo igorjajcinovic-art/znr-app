@@ -1,4 +1,10 @@
 import Link from "next/link";
+import {
+  daysUntil,
+  formatHrDate,
+  isWarningDate,
+  shortDeadlineLabel,
+} from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -10,38 +16,6 @@ type RokItem = {
   href: string;
   type: string;
 };
-
-function startOfToday() {
-  const today = new Date();
-  return new Date(today.getFullYear(), today.getMonth(), today.getDate());
-}
-
-function daysUntil(date: Date) {
-  const today = startOfToday();
-  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  return Math.ceil((target.getTime() - today.getTime()) / 86400000);
-}
-
-function isWarningDate(date: Date | null) {
-  if (!date) return false;
-  return daysUntil(date) <= 30;
-}
-
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("hr-HR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-}
-
-function statusLabel(diff: number) {
-  if (diff < 0) return "Isteklo";
-  if (diff === 0) return "Danas";
-  if (diff <= 7) return `${diff} dana`;
-  return `${diff} dana`;
-}
 
 export default async function Page() {
   const [
@@ -252,7 +226,7 @@ export default async function Page() {
           ) : (
             <div style={listStyle}>
               {rokovi.map((rok, index) => {
-                const diff = daysUntil(rok.date);
+                const diff = daysUntil(rok.date) ?? 0;
                 const urgent = diff <= 7;
                 const tvrtka = tvrtkaPoId.get(rok.href.split("/")[2] || "");
 
@@ -275,9 +249,9 @@ export default async function Page() {
                         ...(urgent ? statusPillDangerStyle : {}),
                       }}
                     >
-                      {statusLabel(diff)}
+                      {shortDeadlineLabel(diff)}
                     </div>
-                    <div style={dateStyle}>{formatDate(rok.date)}</div>
+                    <div style={dateStyle}>{formatHrDate(rok.date)}</div>
                   </Link>
                 );
               })}

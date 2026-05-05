@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  deadlineStatus,
+  deadlineText,
+  formatHrDate,
+  type DeadlineStatus,
+} from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -11,52 +17,7 @@ type PageProps = {
   }>;
 };
 
-type Status = "ok" | "warning" | "expired" | "muted";
-
-function startOfToday() {
-  const today = new Date();
-  return new Date(today.getFullYear(), today.getMonth(), today.getDate());
-}
-
-function daysUntil(date: Date | null) {
-  if (!date) return null;
-
-  const today = startOfToday();
-  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  return Math.ceil((target.getTime() - today.getTime()) / 86400000);
-}
-
-function statusFromDate(date: Date | null): Status {
-  const diff = daysUntil(date);
-
-  if (diff === null) return "muted";
-  if (diff < 0) return "expired";
-  if (diff <= 30) return "warning";
-  return "ok";
-}
-
-function statusText(date: Date | null) {
-  const diff = daysUntil(date);
-
-  if (diff === null) return "Nema roka";
-  if (diff < 0) return `Isteklo prije ${Math.abs(diff)} dana`;
-  if (diff === 0) return "Istječe danas";
-  if (diff === 1) return "Istječe sutra";
-  return `Istječe za ${diff} dana`;
-}
-
-function formatDate(date: Date | null) {
-  if (!date) return "-";
-
-  return new Intl.DateTimeFormat("hr-HR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-}
-
-function statusStyle(status: Status) {
+function statusStyle(status: DeadlineStatus) {
   if (status === "expired") return { ...pillStyle, ...expiredPillStyle };
   if (status === "warning") return { ...pillStyle, ...warningPillStyle };
   if (status === "ok") return { ...pillStyle, ...okPillStyle };
@@ -103,16 +64,16 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
   ]);
 
   const otvoreniRokovi = [
-    radnik.imaDozvolu ? statusFromDate(radnik.dozvolaDo) : "muted",
-    ...lijecnicki.map((item) => statusFromDate(item.vrijediDo)),
-    ...osposobljavanja.map((item) => statusFromDate(item.vrijediDo)),
-    ...ozo.map((item) => statusFromDate(item.rokZamjene)),
+    radnik.imaDozvolu ? deadlineStatus(radnik.dozvolaDo) : "muted",
+    ...lijecnicki.map((item) => deadlineStatus(item.vrijediDo)),
+    ...osposobljavanja.map((item) => deadlineStatus(item.vrijediDo)),
+    ...ozo.map((item) => deadlineStatus(item.rokZamjene)),
   ];
 
   const kriticno = otvoreniRokovi.filter((status) => status === "expired").length;
   const uskoro = otvoreniRokovi.filter((status) => status === "warning").length;
 
-  const ukupniStatus: Status = !radnik.aktivan
+  const ukupniStatus: DeadlineStatus = !radnik.aktivan
     ? "muted"
     : kriticno > 0
     ? "expired"
@@ -166,9 +127,9 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
           <div style={detailsGridStyle}>
             <Detail label="Tvrtka" value={tvrtka.naziv} />
             <Detail label="Status" value={radnik.aktivan ? "Aktivan" : "Neaktivan"} />
-            <Detail label="Datum zaposlenja" value={formatDate(radnik.datumZaposlenja)} />
-            <Detail label="Datum odjave" value={formatDate(radnik.datumOdjave)} />
-            <Detail label="Datum rođenja" value={formatDate(radnik.datumRodjenja)} />
+            <Detail label="Datum zaposlenja" value={formatHrDate(radnik.datumZaposlenja)} />
+            <Detail label="Datum odjave" value={formatHrDate(radnik.datumOdjave)} />
+            <Detail label="Datum rođenja" value={formatHrDate(radnik.datumRodjenja)} />
             <Detail label="Grad / mjesto" value={radnik.grad || "-"} />
             <Detail label="Radno mjesto" value={radnik.radnoMjesto || "-"} />
             <Detail label="OIB" value={radnik.oib} />
@@ -180,20 +141,20 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
           <div style={timelineStyle}>
             <TimelineItem
               title="Radna dozvola"
-              detail={radnik.imaDozvolu ? statusText(radnik.dozvolaDo) : "Nije označeno da ima dozvolu"}
-              date={formatDate(radnik.dozvolaDo)}
-              status={radnik.imaDozvolu ? statusFromDate(radnik.dozvolaDo) : "muted"}
+              detail={radnik.imaDozvolu ? deadlineText(radnik.dozvolaDo) : "Nije označeno da ima dozvolu"}
+              date={formatHrDate(radnik.dozvolaDo)}
+              status={radnik.imaDozvolu ? deadlineStatus(radnik.dozvolaDo) : "muted"}
             />
             <TimelineItem
               title="ZNR osposobljen"
               detail={radnik.znrOsposobljen ? "Osposobljen" : "Nije osposobljen"}
-              date={formatDate(radnik.znrDatum)}
+              date={formatHrDate(radnik.znrDatum)}
               status={radnik.znrOsposobljen ? "ok" : "muted"}
             />
             <TimelineItem
               title="ZOP osposobljen"
               detail={radnik.zopOsposobljen ? "Osposobljen" : "Nije osposobljen"}
-              date={formatDate(radnik.zopDatum)}
+              date={formatHrDate(radnik.zopDatum)}
               status={radnik.zopOsposobljen ? "ok" : "muted"}
             />
           </div>
@@ -212,7 +173,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
               meta={item.napomena || "Bez napomene"}
               dateLabel="Vrijedi do"
               date={item.vrijediDo}
-              status={statusFromDate(item.vrijediDo)}
+              status={deadlineStatus(item.vrijediDo)}
             />
           ))}
         </RecordPanel>
@@ -225,10 +186,10 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
             <RecordRow
               key={item.id}
               title={item.vrsta}
-              meta={item.napomena || `Datum: ${formatDate(item.datum)}`}
+              meta={item.napomena || `Datum: ${formatHrDate(item.datum)}`}
               dateLabel="Vrijedi do"
               date={item.vrijediDo}
-              status={statusFromDate(item.vrijediDo)}
+              status={deadlineStatus(item.vrijediDo)}
             />
           ))}
         </RecordPanel>
@@ -241,7 +202,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
               meta={`Količina: ${item.kolicina}${item.napomena ? ` · ${item.napomena}` : ""}`}
               dateLabel="Rok zamjene"
               date={item.rokZamjene}
-              status={statusFromDate(item.rokZamjene)}
+              status={deadlineStatus(item.rokZamjene)}
             />
           ))}
         </RecordPanel>
@@ -294,7 +255,7 @@ function TimelineItem({
   title: string;
   detail: string;
   date: string;
-  status: Status;
+  status: DeadlineStatus;
 }) {
   return (
     <div style={timelineItemStyle}>
@@ -343,7 +304,7 @@ function RecordRow({
   meta: string;
   dateLabel: string;
   date: Date | null;
-  status: Status;
+  status: DeadlineStatus;
 }) {
   return (
     <div style={recordRowStyle}>
@@ -353,8 +314,8 @@ function RecordRow({
       </div>
       <div style={recordDateStyle}>
         <span>{dateLabel}</span>
-        <strong>{formatDate(date)}</strong>
-        <em>{statusText(date)}</em>
+        <strong>{formatHrDate(date)}</strong>
+        <em>{deadlineText(date)}</em>
       </div>
       <span style={statusStyle(status)}>
         {status === "ok"
@@ -627,3 +588,4 @@ const emptyStyle: React.CSSProperties = {
   color: "#64748b",
   fontWeight: 700,
 };
+

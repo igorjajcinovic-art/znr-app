@@ -1,27 +1,5 @@
 import { prisma } from "@/lib/prisma";
-
-function isWarningDate(date: Date | null): boolean {
-  if (!date) return false;
-
-  const today = new Date();
-  const todayOnly = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  );
-
-  const targetOnly = new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate()
-  );
-
-  const diff = Math.ceil(
-    (targetOnly.getTime() - todayOnly.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  return diff <= 30;
-}
+import { isWarningDate } from "@/lib/dates";
 
 export async function GET() {
   try {
