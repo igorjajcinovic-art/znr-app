@@ -6,7 +6,7 @@ export const TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 type TokenPayload = {
   userId: string;
   email: string;
-  exp: number;
+  exp?: number;
 };
 
 export function hashPassword(password: string) {
@@ -67,8 +67,8 @@ export function verifyToken(token: string): TokenPayload | null {
       Buffer.from(body, "base64url").toString("utf8")
     ) as TokenPayload;
 
-    if (!payload.userId || !payload.email || !payload.exp) return null;
-    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+    if (!payload.userId || !payload.email) return null;
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
 
     return payload;
   } catch {

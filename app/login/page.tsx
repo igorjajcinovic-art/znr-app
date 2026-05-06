@@ -1,11 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [lozinka, setLozinka] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,8 +29,7 @@ export default function LoginPage() {
         throw new Error(text || "Neuspješna prijava.");
       }
 
-      router.push("/");
-      router.refresh();
+      window.location.href = "/";
     } catch (err) {
       setGreska(err instanceof Error ? err.message : "Greška kod prijave.");
     } finally {

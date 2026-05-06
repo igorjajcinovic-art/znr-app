@@ -44,7 +44,8 @@ async function verifyAuthToken(token: string) {
       exp?: number;
     };
 
-    if (!payload.userId || !payload.email || !payload.exp) return false;
+    if (!payload.userId || !payload.email) return false;
+    if (!payload.exp) return true;
     return payload.exp >= Math.floor(Date.now() / 1000);
   } catch {
     return false;
