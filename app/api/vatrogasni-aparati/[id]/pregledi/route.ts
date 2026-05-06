@@ -9,6 +9,30 @@ import {
 } from "@/lib/fire-extinguishers";
 import { prisma } from "@/lib/prisma";
 
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await ensureVatrogasniAparatiTable();
+
+    const { id } = await params;
+
+    const pregledi = await prisma.$queryRaw<VatrogasniAparatPregled[]>`
+      SELECT * FROM "VatrogasniAparatPregled"
+      WHERE "aparatId" = ${id}
+      ORDER BY "datumPregleda" DESC, "createdAt" DESC
+    `;
+
+    return Response.json(pregledi);
+  } catch (error) {
+    console.error("GET /api/vatrogasni-aparati/[id]/pregledi error:", error);
+    return new Response("Ne mogu učitati povijest pregleda aparata.", {
+      status: 500,
+    });
+  }
+}
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

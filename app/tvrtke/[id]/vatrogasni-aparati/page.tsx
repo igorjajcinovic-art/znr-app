@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 
 type Tvrtka = {
   id: string;
@@ -23,6 +23,15 @@ type Aparat = {
   datumPeriodicnogPregleda: string | null;
   sljedeciPeriodicniPregled: string | null;
   status: string;
+  napomena: string | null;
+};
+
+type Pregled = {
+  id: string;
+  aparatId: string;
+  vrstaPregleda: string;
+  datumPregleda: string;
+  sljedeciPregled: string | null;
   napomena: string | null;
 };
 
@@ -127,6 +136,10 @@ function badgeStyle(value: string | null): React.CSSProperties {
   return { ...badgeBaseStyle, background: "#e2e8f0", color: "#475569" };
 }
 
+function vrstaPregledaLabel(value: string) {
+  return value === "periodicni" ? "Periodički" : "Redovni";
+}
+
 export default function VatrogasniAparatiPage() {
   const params = useParams();
   const firmaIdRaw = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -138,6 +151,13 @@ export default function VatrogasniAparatiPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [filterStatus, setFilterStatus] = useState("svi");
+  const [otvorenaPovijest, setOtvorenaPovijest] = useState<string | null>(null);
+  const [preglediPoAparatu, setPreglediPoAparatu] = useState<
+    Record<string, Pregled[]>
+  >({});
+  const [ucitavanjePovijesti, setUcitavanjePovijesti] = useState<string | null>(
+    null
+  );
   const [ucitavanje, setUcitavanje] = useState(true);
   const [spremanje, setSpremanje] = useState(false);
   const [greska, setGreska] = useState("");
@@ -347,11 +367,56 @@ export default function VatrogasniAparatiPage() {
       }
 
       await ucitajSve();
+      setPreglediPoAparatu((prev) => {
+        const next = { ...prev };
+        delete next[aparat.id];
+        return next;
+      });
+      if (otvorenaPovijest === aparat.id) {
+        await ucitajPovijest(aparat.id, true);
+      }
     } catch (err) {
       setGreska(
         err instanceof Error ? err.message : "Greška pri evidentiranju pregleda."
       );
     }
+  };
+
+  const ucitajPovijest = async (aparatId: string, force = false) => {
+    if (!force && preglediPoAparatu[aparatId]) return;
+
+    try {
+      setUcitavanjePovijesti(aparatId);
+      setGreska("");
+
+      const res = await fetch(`/api/vatrogasni-aparati/${aparatId}/pregledi`, {
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Ne mogu učitati povijest pregleda.");
+      }
+
+      const data: Pregled[] = await res.json();
+      setPreglediPoAparatu((prev) => ({ ...prev, [aparatId]: data }));
+    } catch (err) {
+      setGreska(
+        err instanceof Error ? err.message : "Greška pri učitavanju povijesti."
+      );
+    } finally {
+      setUcitavanjePovijesti(null);
+    }
+  };
+
+  const togglePovijest = async (aparatId: string) => {
+    if (otvorenaPovijest === aparatId) {
+      setOtvorenaPovijest(null);
+      return;
+    }
+
+    setOtvorenaPovijest(aparatId);
+    await ucitajPovijest(aparatId);
   };
 
   if (ucitavanje) {
@@ -584,63 +649,123 @@ export default function VatrogasniAparatiPage() {
                   </td>
                 </tr>
               ) : (
-                filtriraniAparati.map((aparat) => (
-                  <tr key={aparat.id}>
-                    <td style={tdStyle}>
-                      <strong>{aparat.oznaka}</strong>
-                      <div style={mutedStyle}>{aparat.tvornickiBroj || "-"}</div>
-                    </td>
-                    <td style={tdStyle}>{aparat.lokacija}</td>
-                    <td style={tdStyle}>{aparat.vrsta || "-"}</td>
-                    <td style={tdStyle}>
-                      <div>{formatDate(aparat.sljedeciRedovniPregled)}</div>
-                      <span style={badgeStyle(aparat.sljedeciRedovniPregled)}>
-                        {rokStatus(aparat.sljedeciRedovniPregled).text}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>
-                      <div>{formatDate(aparat.sljedeciPeriodicniPregled)}</div>
-                      <span
-                        style={badgeStyle(aparat.sljedeciPeriodicniPregled)}
-                      >
-                        {rokStatus(aparat.sljedeciPeriodicniPregled).text}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>{aparat.status}</td>
-                    <td style={tdStyle}>
-                      <button
-                        type="button"
-                        style={smallButtonStyle}
-                        onClick={() => evidentirajPregled(aparat, "redovni")}
-                      >
-                        Redovni
-                      </button>
-                      <button
-                        type="button"
-                        style={smallButtonStyle}
-                        onClick={() =>
-                          evidentirajPregled(aparat, "periodicni")
-                        }
-                      >
-                        Periodički
-                      </button>
-                      <button
-                        type="button"
-                        style={smallButtonStyle}
-                        onClick={() => uredi(aparat)}
-                      >
-                        Uredi
-                      </button>
-                      <button
-                        type="button"
-                        style={dangerButtonStyle}
-                        onClick={() => obrisi(aparat.id)}
-                      >
-                        Obriši
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                filtriraniAparati.map((aparat) => {
+                  const povijestOtvorena = otvorenaPovijest === aparat.id;
+                  const pregledi = preglediPoAparatu[aparat.id] || [];
+
+                  return (
+                    <Fragment key={aparat.id}>
+                      <tr>
+                        <td style={tdStyle}>
+                          <strong>{aparat.oznaka}</strong>
+                          <div style={mutedStyle}>
+                            {aparat.tvornickiBroj || "-"}
+                          </div>
+                        </td>
+                        <td style={tdStyle}>{aparat.lokacija}</td>
+                        <td style={tdStyle}>{aparat.vrsta || "-"}</td>
+                        <td style={tdStyle}>
+                          <div>{formatDate(aparat.sljedeciRedovniPregled)}</div>
+                          <span
+                            style={badgeStyle(aparat.sljedeciRedovniPregled)}
+                          >
+                            {rokStatus(aparat.sljedeciRedovniPregled).text}
+                          </span>
+                        </td>
+                        <td style={tdStyle}>
+                          <div>
+                            {formatDate(aparat.sljedeciPeriodicniPregled)}
+                          </div>
+                          <span
+                            style={badgeStyle(
+                              aparat.sljedeciPeriodicniPregled
+                            )}
+                          >
+                            {rokStatus(aparat.sljedeciPeriodicniPregled).text}
+                          </span>
+                        </td>
+                        <td style={tdStyle}>{aparat.status}</td>
+                        <td style={tdStyle}>
+                          <button
+                            type="button"
+                            style={smallButtonStyle}
+                            onClick={() =>
+                              evidentirajPregled(aparat, "redovni")
+                            }
+                          >
+                            Redovni
+                          </button>
+                          <button
+                            type="button"
+                            style={smallButtonStyle}
+                            onClick={() =>
+                              evidentirajPregled(aparat, "periodicni")
+                            }
+                          >
+                            Periodički
+                          </button>
+                          <button
+                            type="button"
+                            style={smallButtonStyle}
+                            onClick={() => togglePovijest(aparat.id)}
+                          >
+                            {povijestOtvorena ? "Sakrij" : "Povijest"}
+                          </button>
+                          <button
+                            type="button"
+                            style={smallButtonStyle}
+                            onClick={() => uredi(aparat)}
+                          >
+                            Uredi
+                          </button>
+                          <button
+                            type="button"
+                            style={dangerButtonStyle}
+                            onClick={() => obrisi(aparat.id)}
+                          >
+                            Obriši
+                          </button>
+                        </td>
+                      </tr>
+                      {povijestOtvorena ? (
+                        <tr>
+                          <td style={historyCellStyle} colSpan={7}>
+                            {ucitavanjePovijesti === aparat.id ? (
+                              <div style={mutedStyle}>Učitavanje povijesti...</div>
+                            ) : pregledi.length === 0 ? (
+                              <div style={mutedStyle}>
+                                Još nema evidentiranih pregleda za ovaj aparat.
+                              </div>
+                            ) : (
+                              <div style={historyListStyle}>
+                                {pregledi.map((pregled) => (
+                                  <div key={pregled.id} style={historyItemStyle}>
+                                    <strong>
+                                      {vrstaPregledaLabel(
+                                        pregled.vrstaPregleda
+                                      )}
+                                    </strong>
+                                    <span>
+                                      Datum pregleda:{" "}
+                                      {formatDate(pregled.datumPregleda)}
+                                    </span>
+                                    <span>
+                                      Sljedeći rok:{" "}
+                                      {formatDate(pregled.sljedeciPregled)}
+                                    </span>
+                                    {pregled.napomena ? (
+                                      <span>{pregled.napomena}</span>
+                                    ) : null}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -836,6 +961,29 @@ const mutedStyle: React.CSSProperties = {
   marginTop: 4,
   color: "#64748b",
   fontSize: 12,
+};
+
+const historyCellStyle: React.CSSProperties = {
+  padding: 14,
+  borderBottom: "1px solid #eef2f7",
+  background: "#f8fafc",
+};
+
+const historyListStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+};
+
+const historyItemStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "140px 1fr 1fr",
+  gap: 12,
+  alignItems: "center",
+  padding: 10,
+  borderRadius: 8,
+  background: "#ffffff",
+  border: "1px solid #e2e8f0",
+  fontSize: 13,
 };
 
 const smallButtonStyle: React.CSSProperties = {
