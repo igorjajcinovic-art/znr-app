@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
@@ -425,6 +426,12 @@ export default function VatrogasniAparatiPage() {
 
   return (
     <div style={pageStyle}>
+      <div>
+        <Link href={`/tvrtke/${firmaId}`} style={backLinkStyle}>
+          ← Natrag na tvrtku
+        </Link>
+      </div>
+
       <section style={heroStyle}>
         <div>
           <div style={eyebrowStyle}>Vatrogasni aparati</div>
@@ -793,6 +800,12 @@ function Field({
 const pageStyle: React.CSSProperties = {
   display: "grid",
   gap: 18,
+};
+
+const backLinkStyle: React.CSSProperties = {
+  color: "#111827",
+  textDecoration: "none",
+  fontWeight: 700,
 };
 
 const heroStyle: React.CSSProperties = {
