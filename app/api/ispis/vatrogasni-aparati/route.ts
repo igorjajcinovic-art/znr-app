@@ -1,6 +1,7 @@
 import {
   ensureVatrogasniAparatiTable,
   type VatrogasniAparat,
+  type VatrogasniAparatPregled,
 } from "@/lib/fire-extinguishers";
 import { prisma } from "@/lib/prisma";
 
@@ -24,6 +25,10 @@ function escapeHtml(value: string | number | null | undefined) {
     .replaceAll("'", "&#39;");
 }
 
+function vrstaLabel(value: string) {
+  return value === "periodicni" ? "periodički" : "redovni";
+}
+
 export async function GET(req: Request) {
   try {
     await ensureVatrogasniAparatiTable();
@@ -35,7 +40,7 @@ export async function GET(req: Request) {
       return new Response("Nedostaje firmaId.", { status: 400 });
     }
 
-    const [tvrtka, aparati] = await Promise.all([
+    const [tvrtka, aparati, pregledi] = await Promise.all([
       prisma.tvrtka.findUnique({
         where: { id: firmaId },
       }),
@@ -44,15 +49,53 @@ export async function GET(req: Request) {
         WHERE "firmaId" = ${firmaId}
         ORDER BY "lokacija" ASC, "oznaka" ASC
       `,
+      prisma.$queryRaw<VatrogasniAparatPregled[]>`
+        SELECT * FROM "VatrogasniAparatPregled"
+        WHERE "firmaId" = ${firmaId}
+        ORDER BY "datumPregleda" DESC, "createdAt" DESC
+      `,
     ]);
 
     if (!tvrtka) {
       return new Response("Tvrtka nije pronađena.", { status: 404 });
     }
 
+    const preglediPoAparatu = pregledi.reduce<Record<string, VatrogasniAparatPregled[]>>(
+      (acc, pregled) => {
+        acc[pregled.aparatId] = acc[pregled.aparatId] || [];
+        acc[pregled.aparatId].push(pregled);
+        return acc;
+      },
+      {}
+    );
+
     const rows = aparati
       .map(
-        (aparat, index) => `
+        (aparat, index) => {
+          const aparatPregledi = preglediPoAparatu[aparat.id] || [];
+          const evidencija =
+            aparatPregledi.length > 0
+              ? aparatPregledi
+                  .map(
+                    (pregled) =>
+                      `${escapeHtml(formatDate(pregled.datumPregleda))} - ${escapeHtml(
+                        vrstaLabel(pregled.vrstaPregleda)
+                      )}${
+                        pregled.sljedeciPregled
+                          ? `, sljedeći: ${escapeHtml(
+                              formatDate(pregled.sljedeciPregled)
+                            )}`
+                          : ""
+                      }`
+                  )
+                  .join("<br />")
+              : `Zadnji redovni: ${escapeHtml(
+                  formatDate(aparat.datumRedovnogPregleda)
+                )}<br />Zadnji periodički: ${escapeHtml(
+                  formatDate(aparat.datumPeriodicnogPregleda)
+                )}`;
+
+          return `
           <tr>
             <td>${index + 1}</td>
             <td>${escapeHtml(aparat.oznaka)}</td>
@@ -64,10 +107,12 @@ export async function GET(req: Request) {
             <td>${escapeHtml(formatDate(aparat.sljedeciRedovniPregled))}</td>
             <td>${escapeHtml(formatDate(aparat.datumPeriodicnogPregleda))}</td>
             <td>${escapeHtml(formatDate(aparat.sljedeciPeriodicniPregled))}</td>
+            <td>${evidencija}</td>
             <td>${escapeHtml(aparat.status)}</td>
             <td>${escapeHtml(aparat.napomena || "")}</td>
           </tr>
-        `
+        `;
+        }
       )
       .join("");
 
@@ -175,6 +220,7 @@ export async function GET(req: Request) {
                 <th>Sljedeći redovni pregled</th>
                 <th>Datum periodičkog pregleda</th>
                 <th>Sljedeći periodički pregled</th>
+                <th>Evidencija pregleda</th>
                 <th>Status</th>
                 <th>Napomena</th>
               </tr>
@@ -182,7 +228,7 @@ export async function GET(req: Request) {
             <tbody>
               ${
                 rows ||
-                `<tr><td colspan="12">Nema upisanih vatrogasnih aparata.</td></tr>`
+                `<tr><td colspan="13">Nema upisanih vatrogasnih aparata.</td></tr>`
               }
             </tbody>
           </table>

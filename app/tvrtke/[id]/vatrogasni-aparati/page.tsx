@@ -315,6 +315,45 @@ export default function VatrogasniAparatiPage() {
     }
   };
 
+  const evidentirajPregled = async (
+    aparat: Aparat,
+    vrstaPregleda: "redovni" | "periodicni"
+  ) => {
+    const danas = new Date().toISOString().split("T")[0];
+    const label =
+      vrstaPregleda === "redovni" ? "redovni pregled" : "periodički pregled";
+    const datumPregleda = prompt(
+      `Unesi datum za ${label} aparata ${aparat.oznaka}:`,
+      danas
+    );
+
+    if (!datumPregleda) return;
+
+    try {
+      setGreska("");
+
+      const res = await fetch(
+        `/api/vatrogasni-aparati/${aparat.id}/pregledi`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ vrstaPregleda, datumPregleda }),
+        }
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Ne mogu evidentirati pregled.");
+      }
+
+      await ucitajSve();
+    } catch (err) {
+      setGreska(
+        err instanceof Error ? err.message : "Greška pri evidentiranju pregleda."
+      );
+    }
+  };
+
   if (ucitavanje) {
     return <div style={panelStyle}>Učitavanje...</div>;
   }
@@ -569,6 +608,22 @@ export default function VatrogasniAparatiPage() {
                     </td>
                     <td style={tdStyle}>{aparat.status}</td>
                     <td style={tdStyle}>
+                      <button
+                        type="button"
+                        style={smallButtonStyle}
+                        onClick={() => evidentirajPregled(aparat, "redovni")}
+                      >
+                        Redovni
+                      </button>
+                      <button
+                        type="button"
+                        style={smallButtonStyle}
+                        onClick={() =>
+                          evidentirajPregled(aparat, "periodicni")
+                        }
+                      >
+                        Periodički
+                      </button>
                       <button
                         type="button"
                         style={smallButtonStyle}

@@ -98,6 +98,50 @@ export async function POST(req: Request) {
       RETURNING *
     `;
 
+    if (datumRedovnogPregleda) {
+      await prisma.$executeRaw`
+        INSERT INTO "VatrogasniAparatPregled" (
+          "id",
+          "aparatId",
+          "firmaId",
+          "vrstaPregleda",
+          "datumPregleda",
+          "sljedeciPregled"
+        )
+        VALUES (
+          ${randomUUID()},
+          ${id},
+          ${firmaId},
+          ${"redovni"},
+          ${datumRedovnogPregleda},
+          ${sljedeciRedovniPregled}
+        )
+        ON CONFLICT ("aparatId", "vrstaPregleda", "datumPregleda") DO NOTHING
+      `;
+    }
+
+    if (datumPeriodicnogPregleda) {
+      await prisma.$executeRaw`
+        INSERT INTO "VatrogasniAparatPregled" (
+          "id",
+          "aparatId",
+          "firmaId",
+          "vrstaPregleda",
+          "datumPregleda",
+          "sljedeciPregled"
+        )
+        VALUES (
+          ${randomUUID()},
+          ${id},
+          ${firmaId},
+          ${"periodicni"},
+          ${datumPeriodicnogPregleda},
+          ${sljedeciPeriodicniPregled}
+        )
+        ON CONFLICT ("aparatId", "vrstaPregleda", "datumPregleda") DO NOTHING
+      `;
+    }
+
     return Response.json(rows[0], { status: 201 });
   } catch (error) {
     console.error("POST /api/vatrogasni-aparati error:", error);

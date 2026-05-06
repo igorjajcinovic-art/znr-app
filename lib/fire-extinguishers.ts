@@ -18,6 +18,17 @@ export type VatrogasniAparat = {
   updatedAt: Date;
 };
 
+export type VatrogasniAparatPregled = {
+  id: string;
+  aparatId: string;
+  firmaId: string;
+  vrstaPregleda: string;
+  datumPregleda: Date;
+  sljedeciPregled: Date | null;
+  napomena: string | null;
+  createdAt: Date;
+};
+
 export async function ensureVatrogasniAparatiTable() {
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "VatrogasniAparat" (
@@ -57,6 +68,34 @@ export async function ensureVatrogasniAparatiTable() {
   await prisma.$executeRawUnsafe(`
     CREATE INDEX IF NOT EXISTS "VatrogasniAparat_periodicni_idx"
     ON "VatrogasniAparat"("sljedeciPeriodicniPregled");
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "VatrogasniAparatPregled" (
+      "id" TEXT PRIMARY KEY,
+      "aparatId" TEXT NOT NULL,
+      "firmaId" TEXT NOT NULL,
+      "vrstaPregleda" TEXT NOT NULL,
+      "datumPregleda" TIMESTAMP NOT NULL,
+      "sljedeciPregled" TIMESTAMP,
+      "napomena" TEXT,
+      "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS "VatrogasniAparatPregled_aparatId_idx"
+    ON "VatrogasniAparatPregled"("aparatId");
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS "VatrogasniAparatPregled_firmaId_idx"
+    ON "VatrogasniAparatPregled"("firmaId");
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE UNIQUE INDEX IF NOT EXISTS "VatrogasniAparatPregled_unique_idx"
+    ON "VatrogasniAparatPregled"("aparatId", "vrstaPregleda", "datumPregleda");
   `);
 }
 

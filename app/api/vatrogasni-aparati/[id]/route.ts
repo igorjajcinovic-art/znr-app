@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import {
   addMonths,
   addYears,
@@ -60,6 +61,50 @@ export async function PUT(
 
     if (!rows[0]) {
       return new Response("Vatrogasni aparat nije pronađen.", { status: 404 });
+    }
+
+    if (datumRedovnogPregleda) {
+      await prisma.$executeRaw`
+        INSERT INTO "VatrogasniAparatPregled" (
+          "id",
+          "aparatId",
+          "firmaId",
+          "vrstaPregleda",
+          "datumPregleda",
+          "sljedeciPregled"
+        )
+        VALUES (
+          ${randomUUID()},
+          ${id},
+          ${firmaId},
+          ${"redovni"},
+          ${datumRedovnogPregleda},
+          ${sljedeciRedovniPregled}
+        )
+        ON CONFLICT ("aparatId", "vrstaPregleda", "datumPregleda") DO NOTHING
+      `;
+    }
+
+    if (datumPeriodicnogPregleda) {
+      await prisma.$executeRaw`
+        INSERT INTO "VatrogasniAparatPregled" (
+          "id",
+          "aparatId",
+          "firmaId",
+          "vrstaPregleda",
+          "datumPregleda",
+          "sljedeciPregled"
+        )
+        VALUES (
+          ${randomUUID()},
+          ${id},
+          ${firmaId},
+          ${"periodicni"},
+          ${datumPeriodicnogPregleda},
+          ${sljedeciPeriodicniPregled}
+        )
+        ON CONFLICT ("aparatId", "vrstaPregleda", "datumPregleda") DO NOTHING
+      `;
     }
 
     return Response.json(rows[0]);
