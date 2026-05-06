@@ -432,7 +432,7 @@ if (!radnik) return null;
         />
 
         <SekcijaUpozorenja
-          naslov="Radna oprema i strojevi"
+          naslov="Radna oprema, strojevi i ispitivanja"
           stavke={upozorenjaRadnaOprema}
         />
       </div>

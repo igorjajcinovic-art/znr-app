@@ -534,11 +534,14 @@ export default function RadnaOpremaPage() {
         <div style={heroCardStyle}>
           <div style={heroTopRowStyle}>
             <div>
-              <div style={heroBadgeStyle}>Radna oprema i strojevi</div>
+              <div style={heroBadgeStyle}>
+                Radna oprema, strojevi i ispitivanja
+              </div>
               <h1 style={heroTitleStyle}>{tvrtka?.naziv || "Tvrtka"}</h1>
               <div style={heroMetaStyle}>
                 <div>
-                  Evidencija strojeva, alata i druge radne opreme po firmi.
+                  Evidencija radne opreme, strojeva i ispitivanja poput radnog
+                  okoliša, hidrantske mreže i sličnih pregleda.
                 </div>
               </div>
             </div>
@@ -583,7 +586,9 @@ export default function RadnaOpremaPage() {
         </div>
 
         <div style={cardStyle}>
-          <h2 style={sectionTitleStyle}>Uvoz radne opreme iz CSV-a</h2>
+          <h2 style={sectionTitleStyle}>
+            Uvoz radne opreme, strojeva i ispitivanja iz CSV-a
+          </h2>
 
           <div style={helperTextStyle}>
             CSV treba imati barem stupce:
@@ -634,7 +639,7 @@ export default function RadnaOpremaPage() {
         <div style={cardStyle}>
           <div style={sectionTopStyle}>
             <h2 style={sectionTitleStyle}>
-              {editId ? "Uredi zapis" : "Dodaj novi stroj / opremu"}
+              {editId ? "Uredi zapis" : "Dodaj opremu, stroj ili ispitivanje"}
             </h2>
 
             {editId ? (
@@ -656,7 +661,7 @@ export default function RadnaOpremaPage() {
                 onChange={(e) =>
                   setForma((prev) => ({ ...prev, naziv: e.target.value }))
                 }
-                placeholder="npr. Bager CAT 320"
+                placeholder="npr. Bager CAT 320 ili ispitivanje radnog okoliša"
                 style={inputStyle}
               />
             </div>
@@ -668,7 +673,7 @@ export default function RadnaOpremaPage() {
                 onChange={(e) =>
                   setForma((prev) => ({ ...prev, tip: e.target.value }))
                 }
-                placeholder="npr. stroj, alat, vozilo, uređaj"
+                placeholder="npr. stroj, alat, vozilo, uređaj, ispitivanje"
                 style={inputStyle}
               />
             </div>
@@ -798,7 +803,7 @@ export default function RadnaOpremaPage() {
                 onChange={(e) =>
                   setForma((prev) => ({ ...prev, napomena: e.target.value }))
                 }
-                placeholder="Slobodni unos napomene o stroju, dokumentaciji, lokaciji, kvaru..."
+                placeholder="Slobodni unos napomene o opremi, ispitivanju, dokumentaciji, lokaciji, kvaru..."
                 style={textareaStyle}
               />
             </div>
