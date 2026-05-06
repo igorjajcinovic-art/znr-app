@@ -120,9 +120,13 @@ export default function RadniciTvrtkePage() {
 
   const [filterIme, setFilterIme] = useState("");
   const [filterOib, setFilterOib] = useState("");
-  const [filterAktivan, setFilterAktivan] = useState("svi");
+  const [filterAktivan, setFilterAktivan] = useState("aktivni");
   const [filterRadnoMjesto, setFilterRadnoMjesto] = useState("");
   const [samoUpozorenja, setSamoUpozorenja] = useState(false);
+  const [sortField, setSortField] = useState<
+    "ime" | "datumZaposlenja" | "datumOdjave"
+  >("ime");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const [ucitavanje, setUcitavanje] = useState(true);
   const [spremanje, setSpremanje] = useState(false);
@@ -699,7 +703,14 @@ const importCsv = async () => {
   }, [radnici, pregledi, osposobljavanja]);
 
   const filtriraniRadnici = useMemo(() => {
-    return radnici.filter((r) => {
+    const dateValue = (value: string | null) => {
+      if (!value) return null;
+
+      const time = new Date(value).getTime();
+      return Number.isNaN(time) ? null : time;
+    };
+
+    const filtrirani = radnici.filter((r) => {
       const okIme =
         !filterIme ||
         r.ime.toLowerCase().includes(filterIme.toLowerCase());
@@ -727,6 +738,28 @@ const importCsv = async () => {
         okUpozorenja
       );
     });
+
+    return [...filtrirani].sort((a, b) => {
+      if (sortField === "ime") {
+        const result = a.ime.localeCompare(b.ime, "hr", {
+          sensitivity: "base",
+        });
+        return sortDirection === "asc" ? result : -result;
+      }
+
+      const aDate = dateValue(a[sortField]);
+      const bDate = dateValue(b[sortField]);
+
+      if (aDate === null && bDate === null) {
+        return a.ime.localeCompare(b.ime, "hr", { sensitivity: "base" });
+      }
+
+      if (aDate === null) return 1;
+      if (bDate === null) return -1;
+
+      const result = aDate - bDate;
+      return sortDirection === "asc" ? result : -result;
+    });
   }, [
     radnici,
     filterIme,
@@ -734,6 +767,8 @@ const importCsv = async () => {
     filterAktivan,
     filterRadnoMjesto,
     samoUpozorenja,
+    sortField,
+    sortDirection,
     pregledi,
     osposobljavanja,
   ]);
@@ -1126,6 +1161,40 @@ const importCsv = async () => {
             </div>
 
             <div>
+              <label style={labelStyle}>Sortiraj po</label>
+              <select
+                style={inputStyle}
+                value={sortField}
+                onChange={(e) =>
+                  setSortField(
+                    e.target.value as
+                      | "ime"
+                      | "datumZaposlenja"
+                      | "datumOdjave"
+                  )
+                }
+              >
+                <option value="ime">Abecedi</option>
+                <option value="datumZaposlenja">Datumu prijave</option>
+                <option value="datumOdjave">Datumu odjave</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={labelStyle}>Smjer</label>
+              <select
+                style={inputStyle}
+                value={sortDirection}
+                onChange={(e) =>
+                  setSortDirection(e.target.value as "asc" | "desc")
+                }
+              >
+                <option value="asc">Najstarije prvo / A-Z</option>
+                <option value="desc">Najnovije prvo / Z-A</option>
+              </select>
+            </div>
+
+            <div>
               <label style={labelStyle}>Samo upozorenja</label>
               <div style={checkboxWrapStyle}>
                 <input
@@ -1146,9 +1215,11 @@ const importCsv = async () => {
               onClick={() => {
                 setFilterIme("");
                 setFilterOib("");
-                setFilterAktivan("svi");
+                setFilterAktivan("aktivni");
                 setFilterRadnoMjesto("");
                 setSamoUpozorenja(false);
+                setSortField("ime");
+                setSortDirection("asc");
               }}
             >
               Očisti filtere
