@@ -77,6 +77,16 @@ type RadnaOprema = {
   napomena: string | null;
 };
 
+type VatrogasniAparat = {
+  id: string;
+  firmaId: string;
+  oznaka: string;
+  lokacija: string;
+  sljedeciRedovniPregled: string | null;
+  sljedeciPeriodicniPregled: string | null;
+  status: string;
+};
+
 type PlanerItem = {
   id: string;
   firmaId: string;
@@ -102,6 +112,9 @@ export default function TvrtkaDetaljiPage() {
   );
   const [oprema, setOprema] = useState<OzoOprema[]>([]);
   const [radnaOprema, setRadnaOprema] = useState<RadnaOprema[]>([]);
+  const [vatrogasniAparati, setVatrogasniAparati] = useState<
+    VatrogasniAparat[]
+  >([]);
   const [planer, setPlaner] = useState<PlanerItem[]>([]);
   const [ucitavanje, setUcitavanje] = useState(true);
   const [greska, setGreska] = useState("");
@@ -123,6 +136,7 @@ export default function TvrtkaDetaljiPage() {
         osposobljavanjaRes,
         opremaRes,
         radnaOpremaRes,
+        vatrogasniRes,
         planerRes,
       ] = await Promise.all([
         fetch("/api/tvrtke", { cache: "no-store" }),
@@ -141,6 +155,9 @@ export default function TvrtkaDetaljiPage() {
         fetch(`/api/radna-oprema?firmaId=${encodeURIComponent(firmaId)}`, {
           cache: "no-store",
         }),
+        fetch(`/api/vatrogasni-aparati?firmaId=${encodeURIComponent(firmaId)}`, {
+          cache: "no-store",
+        }),
         fetch(`/api/planer?firmaId=${encodeURIComponent(firmaId)}`, {
           cache: "no-store",
         }).catch(() => null),
@@ -157,6 +174,10 @@ export default function TvrtkaDetaljiPage() {
         throw new Error("Ne mogu učitati radnu opremu i strojeve.");
       }
 
+      if (!vatrogasniRes.ok) {
+        throw new Error("Ne mogu učitati vatrogasne aparate.");
+      }
+
       const sveTvrtke: Tvrtka[] = await tvrtkeRes.json();
       const radniciData: Radnik[] = await radniciRes.json();
       const preglediData: Pregled[] = await preglediRes.json();
@@ -164,6 +185,7 @@ export default function TvrtkaDetaljiPage() {
         await osposobljavanjaRes.json();
       const opremaData: OzoOprema[] = await opremaRes.json();
       const radnaOpremaData: RadnaOprema[] = await radnaOpremaRes.json();
+      const vatrogasniData: VatrogasniAparat[] = await vatrogasniRes.json();
 
       let planerData: PlanerItem[] = [];
       if (planerRes && planerRes.ok) {
@@ -186,6 +208,7 @@ export default function TvrtkaDetaljiPage() {
       setOsposobljavanja(osposobljavanjaData);
       setOprema(opremaData);
       setRadnaOprema(radnaOpremaData);
+      setVatrogasniAparati(vatrogasniData);
       setPlaner(planerData);
     } catch (err) {
       setGreska(
@@ -289,12 +312,23 @@ export default function TvrtkaDetaljiPage() {
     [radnaOprema]
   );
 
+  const brojVatrogasnihUpozorenja = useMemo(
+    () =>
+      vatrogasniAparati.filter(
+        (a) =>
+          istjeceUskoroIliIsteklo(a.sljedeciRedovniPregled) ||
+          istjeceUskoroIliIsteklo(a.sljedeciPeriodicniPregled)
+      ).length,
+    [vatrogasniAparati]
+  );
+
   const ukupnoUpozorenja =
     brojDozvolaUpozorenja +
     brojLijecnickihUpozorenja +
     brojOsposobljavanjaUpozorenja +
     brojOpremaUpozorenja +
-    brojRadnaOpremaUpozorenja;
+    brojRadnaOpremaUpozorenja +
+    brojVatrogasnihUpozorenja;
 
   const modules = [
     {
@@ -331,6 +365,13 @@ export default function TvrtkaDetaljiPage() {
       href: `/tvrtke/${firmaId}/radna-oprema`,
       broj: radnaOprema.length,
       oznaka: "zapisa",
+    },
+    {
+      naziv: "Vatrogasni aparati",
+      opis: "Popis aparata, redovni tromjesečni i periodički godišnji pregledi.",
+      href: `/tvrtke/${firmaId}/vatrogasni-aparati`,
+      broj: vatrogasniAparati.length,
+      oznaka: "aparata",
     },
     {
       naziv: "Planer",

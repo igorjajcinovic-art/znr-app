@@ -60,6 +60,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
     if (pathname.includes("/radnici")) return "Radnici";
     if (pathname.includes("/lijecnicki")) return "Liječnički pregledi";
     if (pathname.includes("/osposobljavanja")) return "Osposobljavanja";
+    if (pathname.includes("/vatrogasni-aparati")) {
+      return "Vatrogasni aparati";
+    }
     if (pathname.includes("/oprema") && !pathname.includes("/radna-oprema")) {
       return "OZO oprema";
     }
@@ -105,6 +108,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
       label: "OZO oprema",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/oprema` : "/tvrtke",
       icon: "▣",
+    },
+    {
+      label: "Vatrogasni aparati",
+      href: imaAktivnuFirmu
+        ? `/tvrtke/${firmaId}/vatrogasni-aparati`
+        : "/tvrtke",
+      icon: "!",
     },
     {
       label: "Radna oprema, strojevi i ispitivanja",

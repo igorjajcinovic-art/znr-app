@@ -1,9 +1,23 @@
 import { prisma } from "@/lib/prisma";
 import { isWarningDate } from "@/lib/dates";
+import {
+  ensureVatrogasniAparatiTable,
+  type VatrogasniAparat,
+} from "@/lib/fire-extinguishers";
 
 export async function GET() {
   try {
-    const [aktivniRadnici, lijecnicki, osposobljavanja, ozo, radnaOprema, planer] =
+    await ensureVatrogasniAparatiTable();
+
+    const [
+      aktivniRadnici,
+      lijecnicki,
+      osposobljavanja,
+      ozo,
+      radnaOprema,
+      vatrogasniAparati,
+      planer,
+    ] =
       await Promise.all([
         prisma.radnik.findMany({
           where: {
@@ -14,6 +28,9 @@ export async function GET() {
         prisma.strucnoOsposobljavanje.findMany(),
         prisma.oprema.findMany(),
         prisma.radnaOprema.findMany(),
+        prisma.$queryRaw<VatrogasniAparat[]>`
+          SELECT * FROM "VatrogasniAparat"
+        `,
         prisma.planer.findMany(),
       ]);
 
@@ -43,6 +60,12 @@ export async function GET() {
       isWarningDate(o.sljedeciServis)
     ).length;
 
+    const vatrogasniCount = vatrogasniAparati.filter(
+      (a) =>
+        isWarningDate(a.sljedeciRedovniPregled) ||
+        isWarningDate(a.sljedeciPeriodicniPregled)
+    ).length;
+
     const planerCount = planer.filter((p) => {
       if (p.status === "izvrseno") return false;
 
@@ -57,6 +80,7 @@ export async function GET() {
       osposobljavanjaCount +
       ozoCount +
       radnaOpremaCount +
+      vatrogasniCount +
       planerCount;
 
     return Response.json({
@@ -66,6 +90,7 @@ export async function GET() {
       osposobljavanja: osposobljavanjaCount,
       ozo: ozoCount,
       radnaOprema: radnaOpremaCount,
+      vatrogasniAparati: vatrogasniCount,
       planer: planerCount,
     });
   } catch (error) {
