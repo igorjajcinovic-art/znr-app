@@ -340,6 +340,14 @@ export default function VatrogasniAparatiPage() {
             <span>Upozorenja</span>
             <strong>{brojUpozorenja}</strong>
           </div>
+          <a
+            href={`/api/ispis/vatrogasni-aparati?firmaId=${firmaId}`}
+            target="_blank"
+            rel="noreferrer"
+            style={printLinkStyle}
+          >
+            Upisnik
+          </a>
         </div>
       </section>
 
@@ -648,6 +656,19 @@ const heroStatStyle: React.CSSProperties = {
   background: "#f8fafc",
   display: "grid",
   gap: 6,
+};
+
+const printLinkStyle: React.CSSProperties = {
+  minWidth: 120,
+  padding: "14px 16px",
+  borderRadius: 8,
+  background: "#0f2747",
+  color: "white",
+  textDecoration: "none",
+  fontWeight: 900,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
 };
 
 const panelStyle: React.CSSProperties = {
