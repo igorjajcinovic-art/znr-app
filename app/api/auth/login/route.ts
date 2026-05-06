@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { createToken, hashPassword, verifyPassword } from "@/lib/auth";
+import {
+  createToken,
+  hashPassword,
+  TOKEN_MAX_AGE_SECONDS,
+  verifyPassword,
+} from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
@@ -43,6 +48,8 @@ export async function POST(req: Request) {
       userId: user.id,
       email: user.email,
     });
+    const secureCookie =
+      process.env.NODE_ENV === "production" ? "; Secure" : "";
 
     return new Response(
       JSON.stringify({
@@ -58,7 +65,7 @@ export async function POST(req: Request) {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Set-Cookie": `auth_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`,
+          "Set-Cookie": `auth_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${TOKEN_MAX_AGE_SECONDS}${secureCookie}`,
         },
       }
     );
