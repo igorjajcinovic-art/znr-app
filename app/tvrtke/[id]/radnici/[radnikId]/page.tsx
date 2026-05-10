@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import RadnikDokumentiPanel from "@/app/components/RadnikDokumentiPanel";
 import {
   deadlineStatus,
   deadlineText,
@@ -160,6 +161,8 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
           </div>
         </div>
       </section>
+
+      <RadnikDokumentiPanel firmaId={firmaId} radnikId={radnikId} />
 
       <section style={recordsGridStyle}>
         <RecordPanel
