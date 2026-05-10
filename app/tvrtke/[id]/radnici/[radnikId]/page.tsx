@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import RadnikDokumentiPanel from "@/app/components/RadnikDokumentiPanel";
+import { ensureRadnikUlicaColumn } from "@/lib/workers";
 import {
   deadlineStatus,
   deadlineText,
@@ -27,8 +28,9 @@ function statusStyle(status: DeadlineStatus) {
 
 export default async function RadnikDetaljPage({ params }: PageProps) {
   const { id: firmaId, radnikId } = await params;
+  await ensureRadnikUlicaColumn();
 
-  const [tvrtka, radnik] = await Promise.all([
+  const [tvrtka, radnik, adresaRows] = await Promise.all([
     prisma.tvrtka.findUnique({ where: { id: firmaId } }),
     prisma.radnik.findFirst({
       where: {
@@ -36,6 +38,11 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
         firmaId,
       },
     }),
+    prisma.$queryRaw<Array<{ ulica: string | null }>>`
+      SELECT "ulica" FROM "Radnik"
+      WHERE "id" = ${radnikId} AND "firmaId" = ${firmaId}
+      LIMIT 1
+    `,
   ]);
 
   if (!tvrtka || !radnik) notFound();
@@ -132,6 +139,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
             <Detail label="Datum odjave" value={formatHrDate(radnik.datumOdjave)} />
             <Detail label="Datum rođenja" value={formatHrDate(radnik.datumRodjenja)} />
             <Detail label="Grad / mjesto" value={radnik.grad || "-"} />
+            <Detail label="Ulica i kućni broj" value={adresaRows[0]?.ulica || "-"} />
             <Detail label="Radno mjesto" value={radnik.radnoMjesto || "-"} />
             <Detail label="OIB" value={radnik.oib} />
           </div>

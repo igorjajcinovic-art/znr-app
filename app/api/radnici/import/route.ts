@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { ensureRadnikUlicaColumn } from "@/lib/workers";
 
 type Row = Record<string, unknown>;
 
@@ -94,6 +95,8 @@ function parseBool(value: string): boolean {
 
 export async function POST(req: Request) {
   try {
+    await ensureRadnikUlicaColumn();
+
     const body = await req.json();
 
     const firmaId = String(body?.firmaId ?? "").trim();
@@ -157,6 +160,13 @@ export async function POST(req: Request) {
         "mjesto",
       ]);
 
+      const ulica = get(row, [
+        "ulica",
+        "ulica i kucni broj",
+        "ulica i kućni broj",
+        "adresa",
+      ]);
+
       const imaDozvoluRaw = get(row, [
         "ima radnu dozvolu",
         "radna dozvola",
@@ -199,7 +209,7 @@ export async function POST(req: Request) {
         continue;
       }
 
-      await prisma.radnik.create({
+      const radnik = await prisma.radnik.create({
         data: {
           firmaId,
           ime: punoIme,
@@ -212,6 +222,12 @@ export async function POST(req: Request) {
           dozvolaDo,
         },
       });
+
+      await prisma.$executeRaw`
+        UPDATE "Radnik"
+        SET "ulica" = ${ulica || null}
+        WHERE "id" = ${radnik.id}
+      `;
 
       imported++;
     }

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { ensureRadnikUlicaColumn } from "@/lib/workers";
 
 function parseBool(value: unknown): boolean {
   if (typeof value === "boolean") return value;
@@ -45,6 +46,8 @@ function parseDate(value: unknown): Date | null {
 
 export async function GET(req: Request) {
   try {
+    await ensureRadnikUlicaColumn();
+
     const { searchParams } = new URL(req.url);
     const firmaId = searchParams.get("firmaId");
 
@@ -52,10 +55,11 @@ export async function GET(req: Request) {
       return new Response("Nedostaje firmaId.", { status: 400 });
     }
 
-    const radnici = await prisma.radnik.findMany({
-      where: { firmaId },
-      orderBy: { ime: "asc" },
-    });
+    const radnici = await prisma.$queryRaw`
+      SELECT * FROM "Radnik"
+      WHERE "firmaId" = ${firmaId}
+      ORDER BY "ime" ASC
+    `;
 
     return Response.json(radnici);
   } catch (error) {
@@ -69,6 +73,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    await ensureRadnikUlicaColumn();
+
     const body = await req.json();
 
     const firmaId = String(body?.firmaId ?? "").trim();
@@ -102,6 +108,8 @@ export async function POST(req: Request) {
       });
     }
 
+    const ulica = body?.ulica ? String(body.ulica).trim() : null;
+
     const radnik = await prisma.$transaction(async (tx) => {
       if (aktivan) {
         await tx.radnik.updateMany({
@@ -116,7 +124,7 @@ export async function POST(req: Request) {
         });
       }
 
-      return tx.radnik.create({
+      const kreiraniRadnik = await tx.radnik.create({
         data: {
           firmaId,
           ime,
@@ -137,6 +145,14 @@ export async function POST(req: Request) {
           zopDatum,
         },
       });
+
+      await tx.$executeRaw`
+        UPDATE "Radnik"
+        SET "ulica" = ${ulica}
+        WHERE "id" = ${kreiraniRadnik.id}
+      `;
+
+      return { ...kreiraniRadnik, ulica };
     });
 
     return Response.json(radnik);

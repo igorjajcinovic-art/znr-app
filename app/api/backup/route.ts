@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { ensureRadnikUlicaColumn } from "@/lib/workers";
 
 export async function GET() {
   try {
+    await ensureRadnikUlicaColumn();
+
     const [
       tvrtke,
       radnici,
@@ -14,7 +17,10 @@ export async function GET() {
       users,
     ] = await Promise.all([
       prisma.tvrtka.findMany({ orderBy: { naziv: "asc" } }),
-      prisma.radnik.findMany({ orderBy: { ime: "asc" } }),
+      prisma.$queryRaw<Array<Record<string, unknown>>>`
+        SELECT * FROM "Radnik"
+        ORDER BY "ime" ASC
+      `,
       prisma.lijecnickiPregled.findMany({ orderBy: { createdAt: "desc" } }),
       prisma.strucnoOsposobljavanje.findMany({
         orderBy: { createdAt: "desc" },

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { ensureRadnikUlicaColumn } from "@/lib/workers";
 
 function parseBool(value: unknown): boolean {
   if (typeof value === "boolean") return value;
@@ -51,6 +52,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureRadnikUlicaColumn();
+
     const { id } = await params;
     const body = await req.json();
 
@@ -90,6 +93,8 @@ export async function PUT(
     const zopOsposobljen = parseBool(body?.zopOsposobljen);
     const zopDatum = zopOsposobljen ? parseDate(body?.zopDatum) : null;
 
+    const ulica = body?.ulica ? String(body.ulica).trim() : null;
+
     const radnik = await prisma.$transaction(async (tx) => {
       if (aktivan) {
         await tx.radnik.updateMany({
@@ -105,7 +110,7 @@ export async function PUT(
         });
       }
 
-      return tx.radnik.update({
+      const azuriraniRadnik = await tx.radnik.update({
         where: { id },
         data: {
           firmaId,
@@ -125,6 +130,14 @@ export async function PUT(
           zopDatum,
         },
       });
+
+      await tx.$executeRaw`
+        UPDATE "Radnik"
+        SET "ulica" = ${ulica}
+        WHERE "id" = ${id}
+      `;
+
+      return { ...azuriraniRadnik, ulica };
     });
 
     return Response.json(radnik);

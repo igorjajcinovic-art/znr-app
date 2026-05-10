@@ -15,6 +15,7 @@ type Radnik = {
   datumZaposlenja: string;
   datumRodjenja: string | null;
   grad: string | null;
+  ulica: string | null;
   radnoMjesto: string | null;
   imaDozvolu: boolean;
   dozvolaDo: string | null;
@@ -59,6 +60,7 @@ type FormaRadnik = {
   datumZaposlenja: string;
   datumRodjenja: string;
   grad: string;
+  ulica: string;
   radnoMjesto: string;
   imaDozvolu: boolean;
   dozvolaDo: string;
@@ -77,6 +79,7 @@ type CsvImportRow = {
   datumZaposlenja: string;
   datumRodjenja: string;
   grad: string;
+  ulica: string;
   radnoMjesto: string;
   imaDozvolu: string;
   dozvolaDo: string;
@@ -94,6 +97,7 @@ const prazni: FormaRadnik = {
   datumZaposlenja: "",
   datumRodjenja: "",
   grad: "",
+  ulica: "",
   radnoMjesto: "",
   imaDozvolu: false,
   dozvolaDo: "",
@@ -252,6 +256,7 @@ export default function RadniciTvrtkePage() {
       "Početak rada",
       "Datum rođenja",
       "Grad / mjesto",
+      "Ulica i kućni broj",
       "Radno mjesto",
       "Datum odjave",
       "Ima radnu dozvolu",
@@ -269,6 +274,7 @@ export default function RadniciTvrtkePage() {
       formatDate(r.datumZaposlenja),
       formatDate(r.datumRodjenja),
       r.grad || "",
+      r.ulica || "",
       r.radnoMjesto || "",
       formatDate(r.datumOdjave),
       r.imaDozvolu ? "Da" : "Ne",
@@ -365,6 +371,12 @@ export default function RadniciTvrtkePage() {
   const idxDatumOdjave = indexOf("datum odjave", "odjava");
   const idxDatumRodjenja = indexOf("datum rodjenja", "datum rođenja");
   const idxGrad = indexOf("grad", "grad / mjesto", "grad mjesto");
+  const idxUlica = indexOf(
+    "ulica",
+    "ulica i kucni broj",
+    "ulica i kućni broj",
+    "adresa"
+  );
   const idxRadnoMjesto = indexOf("radno mjesto");
   const idxImaDozvolu = indexOf("ima radnu dozvolu", "dozvola");
   const idxDozvolaDo = indexOf("radna dozvola do", "dozvola do");
@@ -425,6 +437,7 @@ export default function RadniciTvrtkePage() {
       datumZaposlenja,
       datumRodjenja: get(idxDatumRodjenja),
       grad: get(idxGrad),
+      ulica: get(idxUlica),
       radnoMjesto: get(idxRadnoMjesto),
       imaDozvolu: get(idxImaDozvolu),
       dozvolaDo: get(idxDozvolaDo),
@@ -839,6 +852,7 @@ const importCsv = async () => {
       datumZaposlenja,
       datumRodjenja: datumRodjenja || null,
       grad: forma.grad.trim() || null,
+      ulica: forma.ulica.trim() || null,
       radnoMjesto: forma.radnoMjesto.trim() || null,
       imaDozvolu: forma.imaDozvolu,
       dozvolaDo: forma.imaDozvolu ? dozvolaDo || null : null,
@@ -895,6 +909,7 @@ const importCsv = async () => {
           ? ""
           : formatDate(radnik.datumRodjenja),
       grad: radnik.grad || "",
+      ulica: radnik.ulica || "",
       radnoMjesto: radnik.radnoMjesto || "",
       imaDozvolu: radnik.imaDozvolu,
       dozvolaDo:
@@ -1291,6 +1306,17 @@ const importCsv = async () => {
               />
             </Field>
 
+            <Field label="Ulica i kućni broj">
+              <input
+                style={inputStyle}
+                value={forma.ulica}
+                onChange={(e) =>
+                  setForma({ ...forma, ulica: e.target.value })
+                }
+                placeholder="npr. Ilica 10"
+              />
+            </Field>
+
             <Field label="Radno mjesto">
               <input
                 style={inputStyle}
@@ -1636,6 +1662,10 @@ const importCsv = async () => {
                 <b>Radno mjesto:</b> {r.radnoMjesto || "-"}
               </div>
               <div>
+                <b>Adresa:</b>{" "}
+                {[r.ulica, r.grad].filter(Boolean).join(", ") || "-"}
+              </div>
+              <div>
                 <b>Dozvola:</b> {r.imaDozvolu ? "Da" : "Ne"}
               </div>
             </div>
@@ -1715,6 +1745,10 @@ const importCsv = async () => {
                     value={formatDate(detalji.datumRodjenja)}
                   />
                   <Detalj red="Grad / mjesto" value={detalji.grad || "-"} />
+                  <Detalj
+                    red="Ulica i kućni broj"
+                    value={detalji.ulica || "-"}
+                  />
                   <Detalj
                     red="Radno mjesto"
                     value={detalji.radnoMjesto || "-"}
