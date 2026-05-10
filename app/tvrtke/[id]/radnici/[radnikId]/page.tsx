@@ -86,7 +86,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
     <div style={pageStyle}>
       <div style={topNavStyle}>
         <Link href={`/tvrtke/${firmaId}/radnici`} style={backLinkStyle}>
-          Nazad na radnike
+          ← Natrag na sve radnike
         </Link>
         <Link href={`/tvrtke/${firmaId}`} style={plainLinkStyle}>
           {tvrtka.naziv}
