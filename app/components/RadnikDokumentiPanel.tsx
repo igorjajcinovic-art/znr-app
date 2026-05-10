@@ -139,7 +139,7 @@ export default function RadnikDokumentiPanel({ firmaId, radnikId }: Props) {
   };
 
   return (
-    <section style={panelStyle}>
+    <section id="dokumenti-radnika" style={panelStyle}>
       <h2 style={panelTitleStyle}>Dokumenti radnika</h2>
 
       <div style={uploadGridStyle}>

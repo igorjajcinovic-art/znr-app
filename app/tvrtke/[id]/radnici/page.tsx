@@ -1569,6 +1569,13 @@ const importCsv = async () => {
                       Uredi
                     </button>
 
+                    <Link
+                      href={`/tvrtke/${firmaId}/radnici/${r.id}#dokumenti-radnika`}
+                      style={smallLinkButtonStyle}
+                    >
+                      Dokumenti
+                    </Link>
+
                     <button
                       style={smallRedButtonStyle}
                       onClick={() => obrisiRadnika(r.id)}
@@ -1641,6 +1648,13 @@ const importCsv = async () => {
               <button style={smallGrayButtonStyle} onClick={() => pokreniUredenje(r)}>
                 Uredi
               </button>
+
+              <Link
+                href={`/tvrtke/${firmaId}/radnici/${r.id}#dokumenti-radnika`}
+                style={smallLinkButtonStyle}
+              >
+                Dokumenti
+              </Link>
 
               <button style={smallRedButtonStyle} onClick={() => obrisiRadnika(r.id)}>
                 Obriši
@@ -2337,6 +2351,19 @@ const smallGrayButtonStyle: React.CSSProperties = {
   background: "#9ca3af",
   color: "white",
   fontWeight: 700,
+  cursor: "pointer",
+};
+
+const smallLinkButtonStyle: React.CSSProperties = {
+  padding: "8px 10px",
+  borderRadius: 8,
+  border: "none",
+  background: "#0f2747",
+  color: "white",
+  fontWeight: 700,
+  textDecoration: "none",
+  display: "inline-flex",
+  alignItems: "center",
   cursor: "pointer",
 };
 
