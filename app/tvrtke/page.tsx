@@ -28,6 +28,10 @@ export default function TvrtkePage() {
   const [pretraga, setPretraga] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForma, setEditForma] = useState<Forma>(praznaForma);
+  const [updating, setUpdating] = useState(false);
+  const [backupingId, setBackupingId] = useState<string | null>(null);
   const [greska, setGreska] = useState("");
 
   useEffect(() => {
@@ -103,6 +107,89 @@ export default function TvrtkePage() {
       setGreska(err instanceof Error ? err.message : "Greška pri spremanju.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const zapocniUredjivanje = (tvrtka: Tvrtka) => {
+    setGreska("");
+    setEditingId(tvrtka.id);
+    setEditForma({
+      naziv: tvrtka.naziv,
+      oib: tvrtka.oib,
+      adresa: tvrtka.adresa || "",
+    });
+  };
+
+  const odustaniOdUredjivanja = () => {
+    setEditingId(null);
+    setEditForma(praznaForma);
+  };
+
+  const spremiUredjivanje = async (tvrtkaId: string) => {
+    try {
+      setGreska("");
+
+      if (!editForma.naziv.trim() || !editForma.oib.trim()) {
+        setGreska("Naziv i OIB su obavezni.");
+        return;
+      }
+
+      setUpdating(true);
+
+      const res = await fetch(`/api/tvrtke/${tvrtkaId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          naziv: editForma.naziv.trim(),
+          oib: editForma.oib.trim(),
+          adresa: editForma.adresa.trim() || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Ne mogu urediti tvrtku.");
+      }
+
+      odustaniOdUredjivanja();
+      await ucitajTvrtke();
+    } catch (err) {
+      setGreska(err instanceof Error ? err.message : "Greska pri uređivanju.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const preuzmiBackupTvrtke = async (tvrtka: Tvrtka) => {
+    try {
+      setGreska("");
+      setBackupingId(tvrtka.id);
+
+      const res = await fetch(`/api/backup?firmaId=${tvrtka.id}`);
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Ne mogu napraviti backup tvrtke.");
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") || "";
+      const match = disposition.match(/filename="([^"]+)"/);
+      const fileName = match?.[1] || `znr-backup-tvrtka-${tvrtka.oib}.json`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setGreska(err instanceof Error ? err.message : "Greska pri backupu.");
+    } finally {
+      setBackupingId(null);
     }
   };
 
@@ -207,26 +294,110 @@ export default function TvrtkePage() {
             <div style={gridStyle}>
               {filtriraneTvrtke.map((tvrtka) => (
                 <div key={tvrtka.id} style={companyCardStyle}>
-                  <div style={companyTopStyle}>
-                    <div>
-                      <h3 style={companyTitleStyle}>{tvrtka.naziv}</h3>
-                      <div style={companyMetaStyle}>
-                        <strong>OIB:</strong> {tvrtka.oib}
-                      </div>
-                      <div style={companyMetaStyle}>
-                        <strong>Adresa:</strong> {tvrtka.adresa || "-"}
-                      </div>
-                    </div>
-                  </div>
+                  {editingId === tvrtka.id ? (
+                    <>
+                      <div style={editGridStyle}>
+                        <div>
+                          <label style={labelStyle}>Naziv *</label>
+                          <input
+                            value={editForma.naziv}
+                            onChange={(e) =>
+                              setEditForma((p) => ({
+                                ...p,
+                                naziv: e.target.value,
+                              }))
+                            }
+                            style={inputStyle}
+                          />
+                        </div>
 
-                  <div style={companyActionsStyle}>
-                    <Link
-                      href={`/tvrtke/${tvrtka.id}`}
-                      style={primaryLinkStyle}
-                    >
-                      Otvori dashboard
-                    </Link>
-                  </div>
+                        <div>
+                          <label style={labelStyle}>OIB *</label>
+                          <input
+                            value={editForma.oib}
+                            onChange={(e) =>
+                              setEditForma((p) => ({
+                                ...p,
+                                oib: e.target.value,
+                              }))
+                            }
+                            style={inputStyle}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={labelStyle}>Adresa</label>
+                          <input
+                            value={editForma.adresa}
+                            onChange={(e) =>
+                              setEditForma((p) => ({
+                                ...p,
+                                adresa: e.target.value,
+                              }))
+                            }
+                            style={inputStyle}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={companyActionsStyle}>
+                        <button
+                          type="button"
+                          onClick={() => spremiUredjivanje(tvrtka.id)}
+                          disabled={updating}
+                          style={primaryButtonStyle}
+                        >
+                          {updating ? "Spremanje..." : "Spremi promjene"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={odustaniOdUredjivanja}
+                          disabled={updating}
+                          style={secondaryButtonStyle}
+                        >
+                          Odustani
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={companyTopStyle}>
+                        <div>
+                          <h3 style={companyTitleStyle}>{tvrtka.naziv}</h3>
+                          <div style={companyMetaStyle}>
+                            <strong>OIB:</strong> {tvrtka.oib}
+                          </div>
+                          <div style={companyMetaStyle}>
+                            <strong>Adresa:</strong> {tvrtka.adresa || "-"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={companyActionsStyle}>
+                        <Link
+                          href={`/tvrtke/${tvrtka.id}`}
+                          style={primaryLinkStyle}
+                        >
+                          Otvori dashboard
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => zapocniUredjivanje(tvrtka)}
+                          style={secondaryButtonStyle}
+                        >
+                          Uredi
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => preuzmiBackupTvrtke(tvrtka)}
+                          disabled={backupingId === tvrtka.id}
+                          style={secondaryButtonStyle}
+                        >
+                          {backupingId === tvrtka.id ? "Backup..." : "Backup"}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -403,6 +574,9 @@ const companyMetaStyle: React.CSSProperties = {
 
 const companyActionsStyle: React.CSSProperties = {
   marginTop: 18,
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 8,
 };
 
 const primaryLinkStyle: React.CSSProperties = {
@@ -413,4 +587,19 @@ const primaryLinkStyle: React.CSSProperties = {
   borderRadius: 10,
   textDecoration: "none",
   fontWeight: 700,
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  padding: "11px 14px",
+  borderRadius: 10,
+  border: "1px solid #cbd5e1",
+  background: "white",
+  color: "#111827",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const editGridStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 12,
 };
