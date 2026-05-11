@@ -1496,9 +1496,35 @@ const importCsv = async () => {
       </div>
     </div>
 
-    <button style={grayButtonStyle} onClick={exportRadniciCsv}>
-      Izvoz CSV
-    </button>
+    <div style={printActionsStyle}>
+      <button style={grayButtonStyle} onClick={exportRadniciCsv}>
+        Izvoz CSV
+      </button>
+      <a
+        href={`/api/ispis/radnici?firmaId=${firmaId}`}
+        target="_blank"
+        rel="noreferrer"
+        style={printLinkStyle}
+      >
+        Ispis svi
+      </a>
+      <a
+        href={`/api/ispis/radnici?firmaId=${firmaId}&status=aktivni`}
+        target="_blank"
+        rel="noreferrer"
+        style={printLinkStyle}
+      >
+        Ispis aktivni
+      </a>
+      <a
+        href={`/api/ispis/radnici?firmaId=${firmaId}&status=neaktivni`}
+        target="_blank"
+        rel="noreferrer"
+        style={printLinkStyle}
+      >
+        Ispis neaktivni
+      </a>
+    </div>
   </div>
 
   <button
@@ -2366,6 +2392,26 @@ const grayButtonStyle: React.CSSProperties = {
   color: "white",
   fontWeight: 700,
   cursor: "pointer",
+};
+
+const printActionsStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: 8,
+  flexWrap: "wrap",
+};
+
+const printLinkStyle: React.CSSProperties = {
+  padding: "11px 14px",
+  borderRadius: 10,
+  border: "none",
+  background: "#0f2747",
+  color: "white",
+  fontWeight: 700,
+  textDecoration: "none",
+  display: "inline-flex",
+  alignItems: "center",
 };
 
 const smallDarkButtonStyle: React.CSSProperties = {
