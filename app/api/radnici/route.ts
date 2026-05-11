@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parseHrDate } from "@/lib/dates";
 import { ensureRadnikUlicaColumn } from "@/lib/workers";
 
 function parseBool(value: unknown): boolean {
@@ -13,35 +14,6 @@ function parseBool(value: unknown): boolean {
     v === "yes" ||
     v === "aktivan"
   );
-}
-
-function parseDate(value: unknown): Date | null {
-  if (!value) return null;
-
-  const v = String(value).trim();
-  if (!v) return null;
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
-    const d = new Date(`${v}T00:00:00.000Z`);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-
-  const dots = v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\.?$/);
-  if (dots) {
-    const [, dan, mjesec, godina] = dots;
-
-    const d = new Date(
-      `${godina}-${mjesec.padStart(2, "0")}-${dan.padStart(
-        2,
-        "0"
-      )}T00:00:00.000Z`
-    );
-
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 export async function GET(req: Request) {
@@ -83,18 +55,18 @@ export async function POST(req: Request) {
 
     const aktivan = parseBool(body?.aktivan);
 
-    const datumZaposlenja = parseDate(body?.datumZaposlenja);
-    const datumRodjenja = parseDate(body?.datumRodjenja);
-    const datumOdjave = aktivan ? null : parseDate(body?.datumOdjave);
+    const datumZaposlenja = parseHrDate(body?.datumZaposlenja);
+    const datumRodjenja = parseHrDate(body?.datumRodjenja);
+    const datumOdjave = aktivan ? null : parseHrDate(body?.datumOdjave);
 
     const imaDozvolu = parseBool(body?.imaDozvolu);
-    const dozvolaDo = imaDozvolu ? parseDate(body?.dozvolaDo) : null;
+    const dozvolaDo = imaDozvolu ? parseHrDate(body?.dozvolaDo) : null;
 
     const znrOsposobljen = parseBool(body?.znrOsposobljen);
-    const znrDatum = znrOsposobljen ? parseDate(body?.znrDatum) : null;
+    const znrDatum = znrOsposobljen ? parseHrDate(body?.znrDatum) : null;
 
     const zopOsposobljen = parseBool(body?.zopOsposobljen);
-    const zopDatum = zopOsposobljen ? parseDate(body?.zopDatum) : null;
+    const zopDatum = zopOsposobljen ? parseHrDate(body?.zopDatum) : null;
 
     if (!firmaId || !ime || !oib || !datumZaposlenja) {
       return new Response("Nedostaju obavezni podaci.", {

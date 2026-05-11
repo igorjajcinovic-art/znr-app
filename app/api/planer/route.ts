@@ -1,19 +1,5 @@
 import { prisma } from "@/lib/prisma";
-
-function parseDate(value: unknown): Date | null {
-  if (!value) return null;
-
-  const v = String(value).trim();
-  if (!v) return null;
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
-    const d = new Date(`${v}T00:00:00.000Z`);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
+import { parseHrDate } from "@/lib/dates";
 
 function normalizeStatus(status: unknown, datum: Date | null): string {
   const rawStatus = String(status ?? "planirano").trim().toLowerCase();
@@ -86,7 +72,7 @@ export async function POST(req: Request) {
     const firmaId = String(body?.firmaId ?? "").trim();
     const naziv = String(body?.naziv ?? "").trim();
     const tip = String(body?.tip ?? "ostalo").trim();
-    const datum = parseDate(body?.datum);
+    const datum = parseHrDate(body?.datum);
     const status = normalizeStatus(body?.status, datum);
 
     if (!firmaId || !naziv || !datum) {

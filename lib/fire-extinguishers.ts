@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parseHrDate } from "@/lib/dates";
 
 export type VatrogasniAparat = {
   id: string;
@@ -100,34 +101,7 @@ export async function ensureVatrogasniAparatiTable() {
 }
 
 export function parseDate(value: unknown): Date | null {
-  if (!value) return null;
-
-  const v = String(value).trim();
-  if (!v) return null;
-
-  if (v.includes("T")) {
-    const d = new Date(v);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
-    const d = new Date(`${v}T00:00:00.000Z`);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-
-  const dots = v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\.?$/);
-  if (dots) {
-    const [, dd, mm, yyyy] = dots;
-    const iso = `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(
-      2,
-      "0"
-    )}T00:00:00.000Z`;
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return parseHrDate(value);
 }
 
 export function addMonths(date: Date, months: number) {

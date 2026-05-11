@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { formatHrDateValue } from "@/lib/dates";
 
 export async function GET(req: Request) {
   try {
@@ -47,8 +48,8 @@ export async function GET(req: Request) {
               <tr>
                 <td>${z.oib}</td>
                 <td>${z.vrsta}</td>
-                <td>${new Date(z.datum).toLocaleDateString()}</td>
-                <td>${new Date(z.vrijediDo).toLocaleDateString()}</td>
+                <td>${formatHrDateValue(z.datum)}</td>
+                <td>${formatHrDateValue(z.vrijediDo)}</td>
               </tr>
             `
             )
