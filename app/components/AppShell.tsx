@@ -198,15 +198,40 @@ export default function AppShell({ children }: { children: ReactNode }) {
             min-height: 74px !important;
             padding: 14px 16px !important;
             gap: 12px !important;
+            align-items: flex-start !important;
           }
 
           .znr-content {
-            padding: 14px !important;
+            padding: 10px !important;
             max-width: none !important;
           }
 
           .znr-mobile-menu-button {
             display: flex !important;
+          }
+
+          .znr-topbar-title {
+            min-width: 0 !important;
+            flex: 1 !important;
+          }
+
+          .znr-topbar-title-text {
+            font-size: 18px !important;
+            line-height: 1.2 !important;
+            overflow-wrap: anywhere !important;
+          }
+
+          .znr-topbar-right {
+            gap: 6px !important;
+            flex-shrink: 0 !important;
+          }
+
+          .znr-topbar-avatar {
+            display: none !important;
+          }
+
+          .znr-logout-button {
+            padding: 8px 10px !important;
           }
         }
 
@@ -251,12 +276,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
             ☰
           </button>
 
-          <div>
+          <div className="znr-topbar-title">
             <div style={topbarLabelStyle}>Trenutni modul</div>
-            <div style={topbarTitleStyle}>{getTitle()}</div>
+            <div className="znr-topbar-title-text" style={topbarTitleStyle}>
+              {getTitle()}
+            </div>
           </div>
 
-          <div style={topbarRightStyle}>
+          <div className="znr-topbar-right" style={topbarRightStyle}>
             <Link
               href={imaAktivnuFirmu ? `/tvrtke/${firmaId}/upozorenja` : "/tvrtke"}
               style={notificationWrapStyle}
@@ -270,9 +297,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
               ) : null}
             </Link>
 
-            <div style={avatarStyle}>AD</div>
+            <div className="znr-topbar-avatar" style={avatarStyle}>
+              AD
+            </div>
 
-            <button type="button" onClick={odjava} style={logoutButtonStyle}>
+            <button
+              type="button"
+              className="znr-logout-button"
+              onClick={odjava}
+              style={logoutButtonStyle}
+            >
               Odjava
             </button>
           </div>
