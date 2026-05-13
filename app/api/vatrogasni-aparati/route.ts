@@ -50,6 +50,19 @@ export async function POST(req: Request) {
       });
     }
 
+    const postojeci = await prisma.$queryRaw<VatrogasniAparat[]>`
+      SELECT * FROM "VatrogasniAparat"
+      WHERE "firmaId" = ${firmaId}
+        AND LOWER("oznaka") = LOWER(${oznaka})
+      LIMIT 1
+    `;
+
+    if (postojeci[0]) {
+      return new Response("Vatrogasni aparat s tom oznakom već postoji.", {
+        status: 409,
+      });
+    }
+
     const datumRedovnogPregleda = parseDate(body?.datumRedovnogPregleda);
     const sljedeciRedovniPregled =
       parseDate(body?.sljedeciRedovniPregled) ||
