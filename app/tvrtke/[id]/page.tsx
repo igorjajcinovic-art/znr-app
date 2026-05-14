@@ -380,6 +380,13 @@ export default function TvrtkaDetaljiPage() {
       broj: planer.length,
       oznaka: "stavki",
     },
+    {
+      naziv: "Ugovori",
+      opis: "Izrada ugovora o radu na neodređeno vrijeme iz podataka radnika.",
+      href: `/tvrtke/${firmaId}/ugovori`,
+      broj: brojAktivnih,
+      oznaka: "radnika",
+    },
   ];
 
   if (ucitavanje) {
