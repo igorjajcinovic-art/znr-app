@@ -73,6 +73,20 @@ export async function POST(req: Request) {
       return new Response("Nedostaju obavezni podaci.", { status: 400 });
     }
 
+    const aktivniRadnik = await prisma.radnik.findFirst({
+      where: {
+        firmaId,
+        oib,
+        aktivan: true,
+      },
+    });
+
+    if (!aktivniRadnik) {
+      return new Response("Liječnički pregled se može dodati samo aktivnom radniku.", {
+        status: 400,
+      });
+    }
+
     const zapis = await prisma.lijecnickiPregled.create({
       data: {
         firmaId,

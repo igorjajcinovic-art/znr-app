@@ -9,6 +9,7 @@ type Radnik = {
   firmaId: string;
   ime: string;
   oib: string;
+  aktivan: boolean;
 };
 
 type Pregled = {
@@ -402,15 +403,30 @@ export default function LijecnickiPage() {
     };
   };
 
+  const aktivniRadnici = useMemo(
+    () => radnici.filter((radnik) => radnik.aktivan),
+    [radnici]
+  );
+
+  const aktivniOibSet = useMemo(
+    () => new Set(aktivniRadnici.map((radnik) => radnik.oib)),
+    [aktivniRadnici]
+  );
+
+  const preglediAktivnihRadnika = useMemo(
+    () => pregledi.filter((pregled) => aktivniOibSet.has(pregled.oib)),
+    [pregledi, aktivniOibSet]
+  );
+
   const upozorenja = useMemo(() => {
-    return pregledi.filter((p) => {
+    return preglediAktivnihRadnika.filter((p) => {
       const level = statusRoka(p.vrijediDo).level;
       return level === "expired" || level === "warning";
     });
-  }, [pregledi]);
+  }, [preglediAktivnihRadnika]);
 
   const filtriraniPregledi = useMemo(() => {
-    return pregledi.filter((p) => {
+    return preglediAktivnihRadnika.filter((p) => {
       const radnik = radnici.find((r) => r.oib === p.oib);
       const status = statusRoka(p.vrijediDo).level;
 
@@ -432,7 +448,14 @@ export default function LijecnickiPage() {
 
       return okRadnik && okOib && okVrsta && okStatus;
     });
-  }, [pregledi, radnici, filterRadnik, filterOib, filterVrsta, filterStatus]);
+  }, [
+    preglediAktivnihRadnika,
+    radnici,
+    filterRadnik,
+    filterOib,
+    filterVrsta,
+    filterStatus,
+  ]);
 
   const brojUpozorenja = useMemo(() => upozorenja.length, [upozorenja]);
 
@@ -548,8 +571,9 @@ export default function LijecnickiPage() {
 
   const brojVazecih = useMemo(
     () =>
-      pregledi.filter((p) => statusRoka(p.vrijediDo).level === "ok").length,
-    [pregledi]
+      preglediAktivnihRadnika.filter((p) => statusRoka(p.vrijediDo).level === "ok")
+        .length,
+    [preglediAktivnihRadnika]
   );
 
   if (ucitavanje) {
@@ -593,12 +617,12 @@ export default function LijecnickiPage() {
 
             <div style={heroInfoCardStyle}>
               <div style={heroInfoLabelStyle}>Ukupno pregleda</div>
-              <div style={heroInfoValueStyle}>{pregledi.length}</div>
+              <div style={heroInfoValueStyle}>{preglediAktivnihRadnika.length}</div>
             </div>
           </div>
 
           <div style={statsMiniGridStyle}>
-            <MiniStat label="Ukupno" value={pregledi.length} />
+            <MiniStat label="Ukupno" value={preglediAktivnihRadnika.length} />
             <MiniStat label="Važeći" value={brojVazecih} />
             <MiniStat label="Upozorenja" value={brojUpozorenja} alert />
           </div>
@@ -768,7 +792,7 @@ export default function LijecnickiPage() {
                 onChange={(e) => setForma({ ...forma, oib: e.target.value })}
               >
                 <option value="">Odaberi radnika</option>
-                {radnici.map((r) => (
+                {aktivniRadnici.map((r) => (
                   <option key={r.id} value={r.oib}>
                     {r.ime} ({r.oib})
                   </option>
