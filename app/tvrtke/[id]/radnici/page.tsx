@@ -1551,6 +1551,7 @@ const importCsv = async () => {
             <th style={thStyle}>Ime i prezime</th>
             <th style={thStyle}>OIB</th>
             <th style={thStyle}>Početak rada</th>
+            <th style={thStyle}>Datum odjave</th>
             <th style={thStyle}>Radno mjesto</th>
             <th style={thStyle}>Dozvola</th>
             <th style={thStyle}>Akcije</th>
@@ -1560,7 +1561,7 @@ const importCsv = async () => {
         <tbody>
           {filtriraniRadnici.length === 0 ? (
             <tr>
-              <td colSpan={7} style={tdCenterStyle}>
+              <td colSpan={8} style={tdCenterStyle}>
                 Nema radnika za prikaz.
               </td>
             </tr>
@@ -1593,6 +1594,9 @@ const importCsv = async () => {
 
                 <td style={tdStyle}>{r.oib}</td>
                 <td style={tdStyle}>{formatDate(r.datumZaposlenja)}</td>
+                <td style={tdStyle}>
+                  {r.aktivan ? "-" : formatDate(r.datumOdjave)}
+                </td>
                 <td style={tdStyle}>{r.radnoMjesto || "-"}</td>
 
                 <td style={tdStyle}>
@@ -1684,6 +1688,11 @@ const importCsv = async () => {
               <div>
                 <b>Početak rada:</b> {formatDate(r.datumZaposlenja)}
               </div>
+              {!r.aktivan ? (
+                <div>
+                  <b>Datum odjave:</b> {formatDate(r.datumOdjave)}
+                </div>
+              ) : null}
               <div>
                 <b>Radno mjesto:</b> {r.radnoMjesto || "-"}
               </div>
