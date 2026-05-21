@@ -63,7 +63,7 @@ export default function UgovoriPage() {
   const [pocetakRada, setPocetakRada] = useState("");
   const [probniRok, setProbniRok] = useState("6 (šest) mjeseci");
   const [radnoMjesto, setRadnoMjesto] = useState("");
-  const [mjestoRada, setMjestoRada] = useState("Glina");
+  const [mjestoRada, setMjestoRada] = useState("");
   const [placa, setPlaca] = useState("1.050,00 € bruto");
   const [ucitavanje, setUcitavanje] = useState(true);
   const [greska, setGreska] = useState("");
@@ -96,6 +96,7 @@ export default function UgovoriPage() {
 
       setTvrtka(nadenaTvrtka);
       setRadnici(radniciData);
+      setMjestoRada(nadenaTvrtka.adresa || "");
 
       const queryRadnikId =
         typeof window !== "undefined"
@@ -109,7 +110,7 @@ export default function UgovoriPage() {
           setRadnikId(radnik.id);
           setPocetakRada(formatDate(radnik.datumZaposlenja));
           setRadnoMjesto(radnik.radnoMjesto || "");
-          setMjestoRada("Glina");
+          setMjestoRada(nadenaTvrtka.adresa || "");
         }
       }
     } catch (err) {
@@ -137,7 +138,7 @@ export default function UgovoriPage() {
 
     setPocetakRada(formatDate(radnik.datumZaposlenja));
     setRadnoMjesto(radnik.radnoMjesto || "");
-    setMjestoRada("Glina");
+    setMjestoRada(tvrtka?.adresa || "");
   };
 
   const ugovorUrl = useMemo(() => {
