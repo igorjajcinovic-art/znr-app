@@ -63,7 +63,7 @@ export async function GET(req: Request) {
     const datumUgovora = dateParam(searchParams, "datumUgovora", new Date());
     const pocetakRada = dateParam(searchParams, "pocetakRada", radnik.datumZaposlenja);
     const probniRok = textParam(searchParams, "probniRok", "6 (šest) mjeseci");
-    const mjestoRada = textParam(searchParams, "mjestoRada", radnik.grad || tvrtka.adresa || "");
+    const mjestoRada = textParam(searchParams, "mjestoRada", "Glina");
     const placa = textParam(searchParams, "placa", "1.050,00 € bruto");
     const radnoMjesto = textParam(
       searchParams,
