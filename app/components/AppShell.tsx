@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
@@ -142,7 +143,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const SidebarContent = (
     <>
       <Link href={linkTvrtka} style={logoWrapStyle}>
-        <div style={logoIconStyle}>🛡️</div>
+        <div style={logoIconStyle}>
+          <Image
+            src="/znr-logo.png"
+            alt="ZNR logo"
+            width={54}
+            height={54}
+            priority
+            style={logoImageStyle}
+          />
+        </div>
         <div>
           <div style={logoTitleStyle}>ZNR</div>
           <div style={logoSubtitleStyle}>APLIKACIJA</div>
@@ -178,7 +188,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
       ) : null}
 
       <div style={sidebarFooterStyle}>
-        <div style={footerLogoStyle}>🛡️</div>
+        <div style={footerLogoStyle}>
+          <Image
+            src="/znr-logo.png"
+            alt="ZNR logo"
+            width={40}
+            height={40}
+            style={footerLogoImageStyle}
+          />
+        </div>
         <div>
           <div style={footerTitleStyle}>ZNR aplikacija</div>
           <div style={footerVersionStyle}>v1.0.0</div>
@@ -360,15 +378,19 @@ const logoWrapStyle: React.CSSProperties = {
 const logoIconStyle: React.CSSProperties = {
   width: 54,
   height: 54,
-  borderRadius: 18,
-  border: "3px solid #6ee7b7",
-  color: "#6ee7b7",
+  borderRadius: 16,
+  background: "rgba(255,255,255,0.08)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  fontSize: 26,
-  fontWeight: 900,
-  boxShadow: "0 0 20px rgba(110, 231, 183, 0.18)",
+  overflow: "hidden",
+  boxShadow: "0 0 20px rgba(110, 231, 183, 0.16)",
+};
+
+const logoImageStyle: React.CSSProperties = {
+  width: "100%",
+  height: "100%",
+  objectFit: "contain",
 };
 
 const logoTitleStyle: React.CSSProperties = {
@@ -444,11 +466,17 @@ const footerLogoStyle: React.CSSProperties = {
   width: 40,
   height: 40,
   borderRadius: 14,
-  border: "2px solid rgba(255,255,255,0.8)",
+  background: "rgba(255,255,255,0.08)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  fontSize: 20,
+  overflow: "hidden",
+};
+
+const footerLogoImageStyle: React.CSSProperties = {
+  width: "100%",
+  height: "100%",
+  objectFit: "contain",
 };
 
 const footerTitleStyle: React.CSSProperties = {
