@@ -1,5 +1,9 @@
 import { formatHrDateValue } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
+import {
+  ensureTvrtkaDirektorColumn,
+  type TvrtkaRecord,
+} from "@/lib/companies";
 import { ensureRadnikUlicaColumn } from "@/lib/workers";
 
 type RadnikRow = {
@@ -34,6 +38,7 @@ function dateParam(searchParams: URLSearchParams, name: string, fallback: Date |
 export async function GET(req: Request) {
   try {
     await ensureRadnikUlicaColumn();
+    await ensureTvrtkaDirektorColumn();
 
     const { searchParams } = new URL(req.url);
     const firmaId = searchParams.get("firmaId")?.trim();
@@ -43,8 +48,12 @@ export async function GET(req: Request) {
       return new Response("Nedostaje firmaId ili radnikId.", { status: 400 });
     }
 
-    const [tvrtka, radnici] = await Promise.all([
-      prisma.tvrtka.findUnique({ where: { id: firmaId } }),
+    const [tvrtke, radnici] = await Promise.all([
+      prisma.$queryRaw<TvrtkaRecord[]>`
+        SELECT * FROM "Tvrtka"
+        WHERE "id" = ${firmaId}
+        LIMIT 1
+      `,
       prisma.$queryRaw<RadnikRow[]>`
         SELECT "id", "firmaId", "ime", "oib", "datumZaposlenja", "grad", "ulica", "radnoMjesto"
         FROM "Radnik"
@@ -53,13 +62,14 @@ export async function GET(req: Request) {
       `,
     ]);
 
+    const tvrtka = tvrtke[0];
     const radnik = radnici[0];
 
     if (!tvrtka || !radnik) {
       return new Response("Tvrtka ili radnik nisu pronađeni.", { status: 404 });
     }
 
-    const direktor = textParam(searchParams, "direktor", "direktor");
+    const direktor = textParam(searchParams, "direktor", tvrtka.direktor || "direktor");
     const datumUgovora = dateParam(searchParams, "datumUgovora", new Date());
     const pocetakRada = dateParam(searchParams, "pocetakRada", radnik.datumZaposlenja);
     const probniRok = textParam(searchParams, "probniRok", "6 (šest) mjeseci");

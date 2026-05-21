@@ -8,18 +8,21 @@ type Tvrtka = {
   naziv: string;
   oib: string;
   adresa: string | null;
+  direktor: string | null;
 };
 
 type Forma = {
   naziv: string;
   oib: string;
   adresa: string;
+  direktor: string;
 };
 
 const praznaForma: Forma = {
   naziv: "",
   oib: "",
   adresa: "",
+  direktor: "",
 };
 
 export default function TvrtkePage() {
@@ -68,7 +71,8 @@ export default function TvrtkePage() {
       return (
         t.naziv.toLowerCase().includes(q) ||
         t.oib.toLowerCase().includes(q) ||
-        (t.adresa || "").toLowerCase().includes(q)
+        (t.adresa || "").toLowerCase().includes(q) ||
+        (t.direktor || "").toLowerCase().includes(q)
       );
     });
   }, [tvrtke, pretraga]);
@@ -93,6 +97,7 @@ export default function TvrtkePage() {
           naziv: forma.naziv.trim(),
           oib: forma.oib.trim(),
           adresa: forma.adresa.trim() || null,
+          direktor: forma.direktor.trim() || null,
         }),
       });
 
@@ -117,6 +122,7 @@ export default function TvrtkePage() {
       naziv: tvrtka.naziv,
       oib: tvrtka.oib,
       adresa: tvrtka.adresa || "",
+      direktor: tvrtka.direktor || "",
     });
   };
 
@@ -145,6 +151,7 @@ export default function TvrtkePage() {
           naziv: editForma.naziv.trim(),
           oib: editForma.oib.trim(),
           adresa: editForma.adresa.trim() || null,
+          direktor: editForma.direktor.trim() || null,
         }),
       });
 
@@ -255,6 +262,18 @@ export default function TvrtkePage() {
                 placeholder="Adresa"
               />
             </div>
+
+            <div>
+              <label style={labelStyle}>Direktor / zastupnik</label>
+              <input
+                value={forma.direktor}
+                onChange={(e) =>
+                  setForma((p) => ({ ...p, direktor: e.target.value }))
+                }
+                style={inputStyle}
+                placeholder="Ime i prezime direktora"
+              />
+            </div>
           </div>
 
           {greska ? <div style={errorStyle}>{greska}</div> : null}
@@ -338,6 +357,20 @@ export default function TvrtkePage() {
                             style={inputStyle}
                           />
                         </div>
+
+                        <div>
+                          <label style={labelStyle}>Direktor / zastupnik</label>
+                          <input
+                            value={editForma.direktor}
+                            onChange={(e) =>
+                              setEditForma((p) => ({
+                                ...p,
+                                direktor: e.target.value,
+                              }))
+                            }
+                            style={inputStyle}
+                          />
+                        </div>
                       </div>
 
                       <div style={companyActionsStyle}>
@@ -369,6 +402,9 @@ export default function TvrtkePage() {
                           </div>
                           <div style={companyMetaStyle}>
                             <strong>Adresa:</strong> {tvrtka.adresa || "-"}
+                          </div>
+                          <div style={companyMetaStyle}>
+                            <strong>Direktor:</strong> {tvrtka.direktor || "-"}
                           </div>
                         </div>
                       </div>

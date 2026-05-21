@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { ensureTvrtkaDirektorColumn, type TvrtkaRecord } from "@/lib/companies";
 import { ensureVatrogasniAparatiTable } from "@/lib/fire-extinguishers";
 import { ensureRadnikDokumentiTable } from "@/lib/worker-documents";
 import { ensureRadnikUlicaColumn } from "@/lib/workers";
@@ -21,6 +22,7 @@ function backupFileName(prefix: string, naziv?: string | null) {
 export async function GET(req: Request) {
   try {
     await ensureRadnikUlicaColumn();
+    await ensureTvrtkaDirektorColumn();
     await ensureRadnikDokumentiTable();
     await ensureVatrogasniAparatiTable();
 
@@ -28,9 +30,12 @@ export async function GET(req: Request) {
     const firmaId = searchParams.get("firmaId");
 
     if (firmaId) {
-      const tvrtka = await prisma.tvrtka.findUnique({
-        where: { id: firmaId },
-      });
+      const tvrtke = await prisma.$queryRaw<TvrtkaRecord[]>`
+        SELECT * FROM "Tvrtka"
+        WHERE "id" = ${firmaId}
+        LIMIT 1
+      `;
+      const tvrtka = tvrtke[0];
 
       if (!tvrtka) {
         return new Response("Tvrtka nije pronađena.", { status: 404 });
@@ -160,7 +165,10 @@ export async function GET(req: Request) {
       vatrogasniPregledi,
       users,
     ] = await Promise.all([
-      prisma.tvrtka.findMany({ orderBy: { naziv: "asc" } }),
+      prisma.$queryRaw<TvrtkaRecord[]>`
+        SELECT * FROM "Tvrtka"
+        ORDER BY "naziv" ASC
+      `,
       prisma.$queryRaw<Array<RawRow>>`
         SELECT * FROM "Radnik"
         ORDER BY "ime" ASC

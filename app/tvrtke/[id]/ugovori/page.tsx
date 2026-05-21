@@ -9,6 +9,7 @@ type Tvrtka = {
   naziv: string;
   oib: string;
   adresa: string | null;
+  direktor: string | null;
 };
 
 type Radnik = {
@@ -97,6 +98,7 @@ export default function UgovoriPage() {
       setTvrtka(nadenaTvrtka);
       setRadnici(radniciData);
       setMjestoRada(nadenaTvrtka.adresa || "");
+      setDirektor(nadenaTvrtka.direktor || "");
 
       const queryRadnikId =
         typeof window !== "undefined"
