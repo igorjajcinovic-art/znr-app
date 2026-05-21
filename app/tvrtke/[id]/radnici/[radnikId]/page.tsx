@@ -120,6 +120,13 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
             ? "Rokovi uskoro"
             : "Uredno"}
         </div>
+
+        <Link
+          href={`/tvrtke/${firmaId}/ugovori?radnikId=${radnikId}`}
+          style={contractButtonStyle}
+        >
+          Izradi ugovor
+        </Link>
       </section>
 
       <section style={statsGridStyle}>
@@ -363,6 +370,19 @@ const plainLinkStyle: React.CSSProperties = {
   color: "#64748b",
   textDecoration: "none",
   fontWeight: 800,
+};
+
+const contractButtonStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 42,
+  padding: "10px 14px",
+  borderRadius: 8,
+  background: "#111827",
+  color: "white",
+  textDecoration: "none",
+  fontWeight: 900,
 };
 
 const heroStyle: React.CSSProperties = {

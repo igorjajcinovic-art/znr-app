@@ -96,6 +96,22 @@ export default function UgovoriPage() {
 
       setTvrtka(nadenaTvrtka);
       setRadnici(radniciData);
+
+      const queryRadnikId =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("radnikId") || ""
+          : "";
+
+      if (queryRadnikId) {
+        const radnik = radniciData.find((item) => item.id === queryRadnikId);
+
+        if (radnik) {
+          setRadnikId(radnik.id);
+          setPocetakRada(formatDate(radnik.datumZaposlenja));
+          setRadnoMjesto(radnik.radnoMjesto || "");
+          setMjestoRada(radnik.grad || nadenaTvrtka.adresa || "");
+        }
+      }
     } catch (err) {
       setGreska(err instanceof Error ? err.message : "Greška pri učitavanju.");
     } finally {
