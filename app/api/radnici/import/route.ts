@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { ensureRadnikUlicaColumn } from "@/lib/workers";
 
 type Row = Record<string, unknown>;
 
@@ -95,12 +94,11 @@ function parseBool(value: string): boolean {
 
 export async function POST(req: Request) {
   try {
-    await ensureRadnikUlicaColumn();
-
     const body = await req.json();
 
     const firmaId = String(body?.firmaId ?? "").trim();
     const rows: Row[] = Array.isArray(body?.rows) ? body.rows : [];
+    const startRow = Number(body?.startRow ?? 0);
 
     if (!firmaId) {
       return new Response("Nedostaje firmaId", { status: 400 });
@@ -112,6 +110,18 @@ export async function POST(req: Request) {
 
     let imported = 0;
     let skipped = 0;
+    const validRows: Array<{
+      firmaId: string;
+      ime: string;
+      oib: string;
+      datumZaposlenja: Date;
+      aktivan: boolean;
+      radnoMjesto: string | null;
+      grad: string | null;
+      ulica: string | null;
+      imaDozvolu: boolean;
+      dozvolaDo: Date | null;
+    }> = [];
 
     const skippedRows: Array<{
       red: number;
@@ -180,7 +190,7 @@ export async function POST(req: Request) {
       ]);
 
       const datumZaposlenja = parseDate(datumRaw);
-      const aktivan = parseBool(aktivanRaw);
+      const aktivan = aktivanRaw ? parseBool(aktivanRaw) : true;
       const imaDozvolu = parseBool(imaDozvoluRaw);
       const dozvolaDo = imaDozvolu ? parseDate(dozvolaDoRaw) : null;
 
@@ -201,7 +211,7 @@ export async function POST(req: Request) {
         skipped++;
 
         skippedRows.push({
-          red: i + 2,
+          red: startRow + i + 2,
           razlog: razlozi.join(", "),
           podatak: row,
         });
@@ -209,27 +219,26 @@ export async function POST(req: Request) {
         continue;
       }
 
-      const radnik = await prisma.radnik.create({
-        data: {
-          firmaId,
-          ime: punoIme,
-          oib,
-          datumZaposlenja,
-          aktivan,
-          radnoMjesto: radnoMjesto || null,
-          grad: grad || null,
-          imaDozvolu,
-          dozvolaDo,
-        },
+      validRows.push({
+        firmaId,
+        ime: punoIme,
+        oib,
+        datumZaposlenja,
+        aktivan,
+        radnoMjesto: radnoMjesto || null,
+        grad: grad || null,
+        ulica: ulica || null,
+        imaDozvolu,
+        dozvolaDo,
       });
+    }
 
-      await prisma.$executeRaw`
-        UPDATE "Radnik"
-        SET "ulica" = ${ulica || null}
-        WHERE "id" = ${radnik.id}
-      `;
-
-      imported++;
+    const batchSize = 250;
+    for (let i = 0; i < validRows.length; i += batchSize) {
+      const result = await prisma.radnik.createMany({
+        data: validRows.slice(i, i + batchSize),
+      });
+      imported += result.count;
     }
 
     return Response.json({

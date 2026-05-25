@@ -522,25 +522,53 @@ const importCsv = async () => {
       throw new Error("Datoteka nema podataka.");
     }
 
-    const res = await fetch("/api/radnici/import", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        firmaId,
-        rows,
-      }),
-    });
+    const chunkSize = 200;
+    const result = {
+      imported: 0,
+      skipped: 0,
+      skippedRows: [] as Array<{
+        red: number;
+        razlog: string;
+        podatak: Record<string, unknown>;
+      }>,
+    };
 
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(txt || "Greška kod uvoza.");
+    for (let start = 0; start < rows.length; start += chunkSize) {
+      const chunk = rows.slice(start, start + chunkSize);
+      setGreska(
+        `Uvoz radnika u tijeku: ${Math.min(
+          start + chunk.length,
+          rows.length
+        )} / ${rows.length}`
+      );
+
+      const res = await fetch("/api/radnici/import", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firmaId,
+          rows: chunk,
+          startRow: start,
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || "Greška kod uvoza.");
+      }
+
+      const chunkResult = await res.json();
+      result.imported += Number(chunkResult.imported || 0);
+      result.skipped += Number(chunkResult.skipped || 0);
+      result.skippedRows.push(...(chunkResult.skippedRows || []));
     }
 
-    const result = await res.json();
-
-    alert(JSON.stringify(result, null, 2));
+    setGreska("");
+    alert(
+      `Uvoz završen.\nUvezeno: ${result.imported}\nPreskočeno: ${result.skipped}`
+    );
 
     setCsvFile(null);
 
