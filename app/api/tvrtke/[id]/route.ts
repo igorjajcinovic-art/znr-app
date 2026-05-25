@@ -1,7 +1,3 @@
-import {
-  ensureTvrtkaDirektorColumn,
-  type TvrtkaRecord,
-} from "@/lib/companies";
 import { prisma } from "@/lib/prisma";
 
 export async function PUT(
@@ -9,8 +5,6 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await ensureTvrtkaDirektorColumn();
-
     const { id } = await params;
     const body = await req.json();
 
@@ -29,23 +23,17 @@ export async function PUT(
       return new Response("Naziv i OIB su obavezni.", { status: 400 });
     }
 
-    await prisma.tvrtka.update({
+    const tvrtka = await prisma.tvrtka.update({
       where: { id },
       data: {
         naziv,
         oib,
         adresa,
+        direktor,
       },
     });
 
-    const rows = await prisma.$queryRaw<TvrtkaRecord[]>`
-      UPDATE "Tvrtka"
-      SET "direktor" = ${direktor}
-      WHERE "id" = ${id}
-      RETURNING *
-    `;
-
-    return Response.json(rows[0]);
+    return Response.json(tvrtka);
   } catch (error) {
     console.error(error);
     return new Response("Ne mogu urediti tvrtku.", { status: 500 });

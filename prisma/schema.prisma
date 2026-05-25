@@ -12,6 +12,7 @@ model Tvrtka {
   naziv            String
   oib              String                    @unique
   adresa           String?
+  direktor         String?
   radnici          Radnik[]
   lijecnicki       LijecnickiPregled[]
   osposobljavanja  StrucnoOsposobljavanje[]
@@ -29,6 +30,7 @@ model Radnik {
   datumZaposlenja  DateTime
   datumRodjenja    DateTime?
   grad             String?
+  ulica            String?
   radnoMjesto      String?
   imaDozvolu       Boolean   @default(false)
   dozvolaDo        DateTime?

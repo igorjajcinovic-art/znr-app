@@ -1,17 +1,10 @@
-import {
-  ensureTvrtkaDirektorColumn,
-  type TvrtkaRecord,
-} from "@/lib/companies";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    await ensureTvrtkaDirektorColumn();
-
-    const tvrtke = await prisma.$queryRaw<TvrtkaRecord[]>`
-      SELECT * FROM "Tvrtka"
-      ORDER BY "naziv" ASC
-    `;
+    const tvrtke = await prisma.tvrtka.findMany({
+      orderBy: { naziv: "asc" },
+    });
 
     return Response.json(tvrtke);
   } catch (error) {
@@ -22,8 +15,6 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    await ensureTvrtkaDirektorColumn();
-
     const body = await req.json();
 
     const naziv = String(body?.naziv ?? "").trim();
@@ -40,17 +31,11 @@ export async function POST(req: Request) {
         naziv,
         oib,
         adresa,
+        direktor,
       },
     });
 
-    const rows = await prisma.$queryRaw<TvrtkaRecord[]>`
-      UPDATE "Tvrtka"
-      SET "direktor" = ${direktor}
-      WHERE "id" = ${tvrtka.id}
-      RETURNING *
-    `;
-
-    return Response.json(rows[0] || tvrtka, { status: 201 });
+    return Response.json(tvrtka, { status: 201 });
   } catch (error) {
     console.error("POST /api/tvrtke error:", error);
     return new Response("Ne mogu spremiti tvrtku.", { status: 500 });

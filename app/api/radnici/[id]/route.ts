@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { parseHrDate } from "@/lib/dates";
-import { ensureRadnikUlicaColumn } from "@/lib/workers";
 
 function parseBool(value: unknown): boolean {
   if (typeof value === "boolean") return value;
@@ -17,8 +16,6 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await ensureRadnikUlicaColumn();
-
     const { id } = await params;
     const body = await req.json();
 
@@ -86,6 +83,7 @@ export async function PUT(
           datumZaposlenja,
           datumRodjenja,
           grad: body?.grad ? String(body.grad).trim() : null,
+          ulica,
           radnoMjesto: body?.radnoMjesto ? String(body.radnoMjesto).trim() : null,
           imaDozvolu,
           dozvolaDo,
@@ -96,13 +94,7 @@ export async function PUT(
         },
       });
 
-      await tx.$executeRaw`
-        UPDATE "Radnik"
-        SET "ulica" = ${ulica}
-        WHERE "id" = ${id}
-      `;
-
-      return { ...azuriraniRadnik, ulica };
+      return azuriraniRadnik;
     });
 
     return Response.json(radnik);
