@@ -54,6 +54,7 @@ export async function POST(req: Request) {
 
     const firmaId = String(body?.firmaId ?? "").trim();
     const rows: ImportRow[] = Array.isArray(body?.rows) ? body.rows : [];
+    const startRow = Number(body?.startRow ?? 0);
 
     if (!firmaId) {
       return new Response("Nedostaje firmaId.", { status: 400 });
@@ -65,6 +66,33 @@ export async function POST(req: Request) {
 
     let imported = 0;
     let skipped = 0;
+    const validRows: Array<{
+      firmaId: string;
+      oib: string;
+      vrsta: string | null;
+      datum: Date;
+      vrijediDo: Date;
+      napomena: string | null;
+    }> = [];
+
+    const oibs = Array.from(
+      new Set(
+        rows.map((row) => clean(row.oib).replace(/\D/g, "")).filter(Boolean)
+      )
+    );
+
+    const aktivniRadnici = oibs.length
+      ? await prisma.radnik.findMany({
+          where: {
+            firmaId,
+            oib: { in: oibs },
+            aktivan: true,
+          },
+          select: { oib: true },
+        })
+      : [];
+
+    const aktivniOibSet = new Set(aktivniRadnici.map((radnik) => radnik.oib));
 
     const skippedRows: Array<{
       red: number;
@@ -89,18 +117,7 @@ export async function POST(req: Request) {
       if (!datum) razlozi.push("neispravan datum pregleda");
       if (!vrijediDo) razlozi.push("neispravan datum vrijedi do");
 
-      // VAŽNO:
-      // Uvoz liječničkih vrijedi samo za AKTIVNOG radnika.
-      // Ako postoji isti OIB kao neaktivan, njega ignoriramo.
-      const radnik = await prisma.radnik.findFirst({
-        where: {
-          firmaId,
-          oib,
-          aktivan: true,
-        },
-      });
-
-      if (!radnik) {
+      if (!aktivniOibSet.has(oib)) {
         razlozi.push("aktivni radnik s tim OIB-om ne postoji u bazi");
       }
 
@@ -108,7 +125,7 @@ export async function POST(req: Request) {
         skipped++;
 
         skippedRows.push({
-          red: i + 2,
+          red: startRow + i + 2,
           razlog: razlozi.join(", "),
           podatak: row,
         });
@@ -119,18 +136,22 @@ export async function POST(req: Request) {
       const datumSafe: Date = datum;
       const vrijediDoSafe: Date = vrijediDo;
 
-      await prisma.lijecnickiPregled.create({
-        data: {
-          firmaId,
-          oib,
-          vrsta: clean(row.vrsta) || null,
-          datum: datumSafe,
-          vrijediDo: vrijediDoSafe,
-          napomena: clean(row.napomena) || null,
-        },
+      validRows.push({
+        firmaId,
+        oib,
+        vrsta: clean(row.vrsta) || null,
+        datum: datumSafe,
+        vrijediDo: vrijediDoSafe,
+        napomena: clean(row.napomena) || null,
       });
+    }
 
-      imported++;
+    const batchSize = 250;
+    for (let i = 0; i < validRows.length; i += batchSize) {
+      const result = await prisma.lijecnickiPregled.createMany({
+        data: validRows.slice(i, i + batchSize),
+      });
+      imported += result.count;
     }
 
     return Response.json({

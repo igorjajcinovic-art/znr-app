@@ -306,23 +306,50 @@ export default function LijecnickiPage() {
         throw new Error("CSV nema podataka ili zaglavlje nije ispravno.");
       }
 
-      const res = await fetch("/api/lijecnicki/import", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          firmaId,
-          rows,
-        }),
-      });
+      const chunkSize = 200;
+      const result = {
+        imported: 0,
+        skipped: 0,
+        skippedRows: [] as Array<{
+          red: number;
+          razlog: string;
+          podatak: CsvImportRow;
+        }>,
+      };
 
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || "Greška kod uvoza CSV-a.");
+      for (let start = 0; start < rows.length; start += chunkSize) {
+        const chunk = rows.slice(start, start + chunkSize);
+        setGreska(
+          `Uvoz liječničkih u tijeku: ${Math.min(
+            start + chunk.length,
+            rows.length
+          )} / ${rows.length}`
+        );
+
+        const res = await fetch("/api/lijecnicki/import", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            firmaId,
+            rows: chunk,
+            startRow: start,
+          }),
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || "Greška kod uvoza CSV-a.");
+        }
+
+        const chunkResult = await res.json();
+        result.imported += Number(chunkResult.imported || 0);
+        result.skipped += Number(chunkResult.skipped || 0);
+        result.skippedRows.push(...(chunkResult.skippedRows || []));
       }
 
-      const result = await res.json();
+      setGreska("");
 
       alert(
         `Uvoz završen.\nUvezeno: ${result.imported}\nPreskočeno: ${result.skipped}`
