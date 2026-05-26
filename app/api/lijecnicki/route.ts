@@ -48,8 +48,22 @@ export async function GET(req: Request) {
 
     await syncStatuse(firmaId);
 
+    const aktivniOibovi = firmaId
+      ? (
+          await prisma.radnik.findMany({
+            where: { firmaId, aktivan: true },
+            select: { oib: true },
+          })
+        ).map((radnik) => radnik.oib)
+      : [];
+
     const data = await prisma.lijecnickiPregled.findMany({
-      where: firmaId ? { firmaId } : undefined,
+      where: firmaId
+        ? {
+            firmaId,
+            oib: { in: aktivniOibovi },
+          }
+        : undefined,
       orderBy: [{ vrijediDo: "asc" }, { createdAt: "desc" }],
     });
 

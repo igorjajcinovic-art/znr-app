@@ -185,7 +185,7 @@ export default function LijecnickiPage() {
     ];
 
     const rows = filtriraniPregledi.map((p) => {
-      const radnik = radnici.find((r) => r.oib === p.oib);
+      const radnik = aktivniRadnikPoOib.get(p.oib);
 
       return [
         radnik?.ime || "",
@@ -483,6 +483,18 @@ export default function LijecnickiPage() {
     [radnici]
   );
 
+  const aktivniRadnikPoOib = useMemo(() => {
+    const mapa = new Map<string, Radnik>();
+
+    for (const radnik of aktivniRadnici) {
+      if (!mapa.has(radnik.oib)) {
+        mapa.set(radnik.oib, radnik);
+      }
+    }
+
+    return mapa;
+  }, [aktivniRadnici]);
+
   const aktivniOibSet = useMemo(
     () => new Set(aktivniRadnici.map((radnik) => radnik.oib)),
     [aktivniRadnici]
@@ -502,7 +514,7 @@ export default function LijecnickiPage() {
 
   const filtriraniPregledi = useMemo(() => {
     return preglediAktivnihRadnika.filter((p) => {
-      const radnik = radnici.find((r) => r.oib === p.oib);
+      const radnik = aktivniRadnikPoOib.get(p.oib);
       const status = statusRoka(p.vrijediDo).level;
 
       const okRadnik =
@@ -525,7 +537,7 @@ export default function LijecnickiPage() {
     });
   }, [
     preglediAktivnihRadnika,
-    radnici,
+    aktivniRadnikPoOib,
     filterRadnik,
     filterOib,
     filterVrsta,
@@ -768,7 +780,7 @@ export default function LijecnickiPage() {
           ) : (
             <div style={warningListStyle}>
               {upozorenja.map((p) => {
-                const radnik = radnici.find((r) => r.oib === p.oib);
+                const radnik = aktivniRadnikPoOib.get(p.oib);
                 const status = statusRoka(p.vrijediDo);
 
                 return (
@@ -977,7 +989,7 @@ export default function LijecnickiPage() {
                   </tr>
                 ) : (
                   filtriraniPregledi.map((p) => {
-                    const radnik = radnici.find((r) => r.oib === p.oib);
+                    const radnik = aktivniRadnikPoOib.get(p.oib);
                     const status = statusRoka(p.vrijediDo);
 
                     return (
@@ -1046,7 +1058,7 @@ export default function LijecnickiPage() {
                 <div>
                   <h2 style={modalTitleStyle}>Detalji pregleda</h2>
                   <div style={modalSubtitleStyle}>
-                    {radnici.find((r) => r.oib === detalji.oib)?.ime || detalji.oib}
+                    {aktivniRadnikPoOib.get(detalji.oib)?.ime || detalji.oib}
                   </div>
                 </div>
                 <button
@@ -1060,7 +1072,7 @@ export default function LijecnickiPage() {
               <div style={detailSectionStyle}>
                 <Detalj
                   red="Ime i prezime"
-                  value={radnici.find((r) => r.oib === detalji.oib)?.ime || "-"}
+                  value={aktivniRadnikPoOib.get(detalji.oib)?.ime || "-"}
                 />
                 <Detalj red="OIB" value={detalji.oib} />
                 <Detalj red="Vrsta" value={detalji.vrsta || "-"} />
