@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 type ImportRow = {
+  aktivan?: string | null;
   oib?: string;
   vrsta?: string | null;
   datum?: string | null;
@@ -46,6 +47,22 @@ function parseDate(value: unknown): Date | null {
 
   const d = new Date(v);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function isExplicitInactive(value: unknown): boolean {
+  const v = clean(value).toLowerCase();
+
+  return (
+    v === "ne" ||
+    v === "no" ||
+    v === "false" ||
+    v === "0" ||
+    v === "neaktivan" ||
+    v === "neaktivno" ||
+    v === "odjavljen" ||
+    v === "odjavljena" ||
+    v === "inactive"
+  );
 }
 
 export async function POST(req: Request) {
@@ -116,6 +133,10 @@ export async function POST(req: Request) {
 
       if (!datum) razlozi.push("neispravan datum pregleda");
       if (!vrijediDo) razlozi.push("neispravan datum vrijedi do");
+
+      if (isExplicitInactive(row.aktivan)) {
+        razlozi.push("radnik je u datoteci označen kao neaktivan");
+      }
 
       if (!aktivniOibSet.has(oib)) {
         razlozi.push("aktivni radnik s tim OIB-om ne postoji u bazi");

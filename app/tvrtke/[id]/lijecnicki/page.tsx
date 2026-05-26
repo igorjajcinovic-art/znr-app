@@ -39,6 +39,7 @@ type FormaPregled = {
 };
 
 type CsvImportRow = {
+  aktivan: string;
   oib: string;
   vrsta: string;
   datum: string;
@@ -265,6 +266,7 @@ export default function LijecnickiPage() {
     };
 
     const idxOib = indexOf("oib");
+    const idxAktivan = indexOf("aktivan", "status");
     const idxVrsta = indexOf("vrsta pregleda", "vrsta");
     const idxDatum = indexOf("datum pregleda", "datum");
     const idxVrijediDo = indexOf("vrijedi do");
@@ -276,6 +278,7 @@ export default function LijecnickiPage() {
       const get = (index: number) => (index >= 0 ? cols[index] ?? "" : "");
 
       return {
+        aktivan: get(idxAktivan),
         oib: get(idxOib),
         vrsta: get(idxVrsta),
         datum: get(idxDatum),
@@ -313,6 +316,7 @@ export default function LijecnickiPage() {
       };
 
       return {
+        aktivan: get("aktivan", "status"),
         oib: get("oib"),
         vrsta: get("vrsta pregleda", "vrsta"),
         datum: get("datum pregleda", "datum"),
@@ -722,7 +726,8 @@ export default function LijecnickiPage() {
             Datoteka treba imati barem stupce:
             <strong> OIB</strong>, <strong>Datum pregleda</strong>,
             <strong> Vrijedi do</strong>.
-            Može imati i polja Vrsta pregleda i Napomena.
+            Može imati i polja Aktivan, Vrsta pregleda i Napomena. Redovi gdje
+            je Aktivan NE neće se uvesti.
           </div>
 
           <div style={uploadGridStyle}>
