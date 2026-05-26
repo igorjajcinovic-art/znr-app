@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import * as XLSX from "xlsx";
 
 type Radnik = {
   id: string;
@@ -284,6 +285,54 @@ export default function LijecnickiPage() {
     });
   };
 
+  const readExcelRows = async (file: File): Promise<CsvImportRow[]> => {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    if (!sheet) return [];
+
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+      defval: "",
+    });
+
+    return rows.map((row) => {
+      const normalized: Record<string, string> = {};
+
+      for (const [key, value] of Object.entries(row)) {
+        normalized[normalizeHeader(key)] = String(value ?? "").trim();
+      }
+
+      const get = (...aliases: string[]) => {
+        for (const alias of aliases) {
+          const value = normalized[normalizeHeader(alias)];
+          if (value) return value;
+        }
+
+        return "";
+      };
+
+      return {
+        oib: get("oib"),
+        vrsta: get("vrsta pregleda", "vrsta"),
+        datum: get("datum pregleda", "datum"),
+        vrijediDo: get("vrijedi do"),
+        napomena: get("napomena"),
+      };
+    });
+  };
+
+  const readFileRows = async (file: File): Promise<CsvImportRow[]> => {
+    const name = file.name.toLowerCase();
+
+    if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+      return readExcelRows(file);
+    }
+
+    const text = await file.text();
+    return readCsvRows(text);
+  };
+
   const importCsv = async () => {
     if (!firmaId) {
       alert("Nedostaje ID tvrtke.");
@@ -291,7 +340,7 @@ export default function LijecnickiPage() {
     }
 
     if (!csvFile) {
-      alert("Odaberi CSV file.");
+      alert("Odaberi CSV ili Excel file.");
       return;
     }
 
@@ -299,11 +348,10 @@ export default function LijecnickiPage() {
       setImportanje(true);
       setGreska("");
 
-      const text = await csvFile.text();
-      const rows = readCsvRows(text);
+      const rows = await readFileRows(csvFile);
 
       if (rows.length === 0) {
-        throw new Error("CSV nema podataka ili zaglavlje nije ispravno.");
+        throw new Error("Datoteka nema podataka ili zaglavlje nije ispravno.");
       }
 
       const chunkSize = 200;
@@ -656,10 +704,10 @@ export default function LijecnickiPage() {
         </div>
 
         <div style={cardStyle}>
-          <h2 style={sectionTitleStyle}>Uvoz liječničkih iz CSV-a</h2>
+          <h2 style={sectionTitleStyle}>Uvoz liječničkih iz CSV-a ili Excela</h2>
 
           <div style={helperTextStyle}>
-            CSV treba imati barem stupce:
+            Datoteka treba imati barem stupce:
             <strong> OIB</strong>, <strong>Datum pregleda</strong>,
             <strong> Vrijedi do</strong>.
             Može imati i polja Vrsta pregleda i Napomena.
@@ -667,11 +715,11 @@ export default function LijecnickiPage() {
 
           <div style={uploadGridStyle}>
             <div>
-              <label style={labelStyle}>Odaberi CSV file</label>
+              <label style={labelStyle}>Odaberi CSV ili Excel file</label>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,text/csv,.xlsx,.xls"
                 style={inputStyle}
                 onChange={(e) => {
                   const file = e.target.files?.[0] || null;
