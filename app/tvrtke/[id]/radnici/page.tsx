@@ -125,6 +125,7 @@ export default function RadniciTvrtkePage() {
   const [filterIme, setFilterIme] = useState("");
   const [filterOib, setFilterOib] = useState("");
   const [filterAktivan, setFilterAktivan] = useState("aktivni");
+  const [filterRadnaDozvola, setFilterRadnaDozvola] = useState("svi");
   const [filterRadnoMjesto, setFilterRadnoMjesto] = useState("");
   const [samoUpozorenja, setSamoUpozorenja] = useState(false);
   const [sortField, setSortField] = useState<
@@ -763,6 +764,11 @@ const importCsv = async () => {
         (filterAktivan === "aktivni" && r.aktivan) ||
         (filterAktivan === "neaktivni" && !r.aktivan);
 
+      const okRadnaDozvola =
+        filterRadnaDozvola === "svi" ||
+        (filterRadnaDozvola === "ima" && r.imaDozvolu) ||
+        (filterRadnaDozvola === "nema" && !r.imaDozvolu);
+
       const okRadnoMjesto =
         !filterRadnoMjesto ||
         (r.radnoMjesto || "")
@@ -775,6 +781,7 @@ const importCsv = async () => {
         okIme &&
         okOib &&
         okAktivan &&
+        okRadnaDozvola &&
         okRadnoMjesto &&
         okUpozorenja
       );
@@ -806,6 +813,7 @@ const importCsv = async () => {
     filterIme,
     filterOib,
     filterAktivan,
+    filterRadnaDozvola,
     filterRadnoMjesto,
     samoUpozorenja,
     sortField,
@@ -1194,6 +1202,19 @@ const importCsv = async () => {
             </div>
 
             <div>
+              <label style={labelStyle}>Radna dozvola</label>
+              <select
+                style={inputStyle}
+                value={filterRadnaDozvola}
+                onChange={(e) => setFilterRadnaDozvola(e.target.value)}
+              >
+                <option value="svi">Svi</option>
+                <option value="ima">Samo s radnom dozvolom</option>
+                <option value="nema">Samo bez radne dozvole</option>
+              </select>
+            </div>
+
+            <div>
               <label style={labelStyle}>Radno mjesto</label>
               <input
                 style={inputStyle}
@@ -1259,6 +1280,7 @@ const importCsv = async () => {
                 setFilterIme("");
                 setFilterOib("");
                 setFilterAktivan("aktivni");
+                setFilterRadnaDozvola("svi");
                 setFilterRadnoMjesto("");
                 setSamoUpozorenja(false);
                 setSortField("ime");
@@ -2184,7 +2206,7 @@ const uploadGridStyle: React.CSSProperties = {
 
 const filterGridStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+  gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
   gap: 16,
 };
 
