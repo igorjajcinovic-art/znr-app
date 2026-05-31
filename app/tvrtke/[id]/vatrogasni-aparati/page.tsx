@@ -152,6 +152,11 @@ export default function VatrogasniAparatiPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [filterStatus, setFilterStatus] = useState("svi");
+  const [obnovaVrsta, setObnovaVrsta] = useState<"redovni" | "periodicni">(
+    "redovni"
+  );
+  const [obnovaDatum, setObnovaDatum] = useState("");
+  const [obnovaNapomena, setObnovaNapomena] = useState("");
   const [otvorenaPovijest, setOtvorenaPovijest] = useState<string | null>(null);
   const [preglediPoAparatu, setPreglediPoAparatu] = useState<
     Record<string, Pregled[]>
@@ -161,6 +166,7 @@ export default function VatrogasniAparatiPage() {
   );
   const [ucitavanje, setUcitavanje] = useState(true);
   const [spremanje, setSpremanje] = useState(false);
+  const [obnavljanje, setObnavljanje] = useState(false);
   const [greska, setGreska] = useState("");
 
   useEffect(() => {
@@ -380,6 +386,56 @@ export default function VatrogasniAparatiPage() {
       setGreska(
         err instanceof Error ? err.message : "Greška pri evidentiranju pregleda."
       );
+    }
+  };
+
+  const obnoviSvePreglede = async () => {
+    if (!obnovaDatum) {
+      alert("Odaberi datum pregleda.");
+      return;
+    }
+
+    const label =
+      obnovaVrsta === "redovni" ? "redovni pregled" : "periodiÄki pregled";
+
+    if (
+      !confirm(
+        `Obnoviti ${label} za svih ${aparati.length} vatrogasnih aparata na datum ${formatDate(
+          obnovaDatum
+        )}?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setObnavljanje(true);
+      setGreska("");
+
+      const res = await fetch("/api/vatrogasni-aparati/obnovi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firmaId,
+          vrstaPregleda: obnovaVrsta,
+          datumPregleda: obnovaDatum,
+          napomena: obnovaNapomena.trim() || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Ne mogu obnoviti preglede.");
+      }
+
+      const result = await res.json();
+      setPreglediPoAparatu({});
+      await ucitajSve();
+      alert(`Obnovljeno aparata: ${result.updated || 0}`);
+    } catch (err) {
+      setGreska(err instanceof Error ? err.message : "GreÅ¡ka pri obnovi pregleda.");
+    } finally {
+      setObnavljanje(false);
     }
   };
 
@@ -610,6 +666,51 @@ export default function VatrogasniAparatiPage() {
               Odustani
             </button>
           ) : null}
+        </div>
+      </section>
+
+      <section style={panelStyle}>
+        <h2 style={sectionTitleStyle}>Skupna obnova pregleda</h2>
+        <div style={bulkRenewStyle}>
+          <Field label="Vrsta pregleda">
+            <select
+              style={inputStyle}
+              value={obnovaVrsta}
+              onChange={(e) =>
+                setObnovaVrsta(e.target.value as "redovni" | "periodicni")
+              }
+            >
+              <option value="redovni">Redovni pregled</option>
+              <option value="periodicni">PeriodiÄki pregled</option>
+            </select>
+          </Field>
+
+          <Field label="Datum pregleda">
+            <input
+              type="date"
+              style={inputStyle}
+              value={obnovaDatum}
+              onChange={(e) => setObnovaDatum(e.target.value)}
+            />
+          </Field>
+
+          <Field label="Napomena">
+            <input
+              style={inputStyle}
+              value={obnovaNapomena}
+              onChange={(e) => setObnovaNapomena(e.target.value)}
+              placeholder="npr. skupna obnova pregleda"
+            />
+          </Field>
+
+          <button
+            type="button"
+            style={primaryButtonStyle}
+            onClick={obnoviSvePreglede}
+            disabled={obnavljanje || aparati.length === 0}
+          >
+            {obnavljanje ? "Obnavljanje..." : "Obnovi sve aparate"}
+          </button>
         </div>
       </section>
 
@@ -908,6 +1009,13 @@ const actionsStyle: React.CSSProperties = {
   gap: 10,
   marginTop: 16,
   flexWrap: "wrap",
+};
+
+const bulkRenewStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(170px, 220px) minmax(170px, 220px) minmax(220px, 1fr) auto",
+  gap: 12,
+  alignItems: "end",
 };
 
 const primaryButtonStyle: React.CSSProperties = {
