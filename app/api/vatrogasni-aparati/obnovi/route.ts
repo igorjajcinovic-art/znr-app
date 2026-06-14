@@ -17,6 +17,12 @@ export async function POST(req: Request) {
     const vrstaPregleda = String(body?.vrstaPregleda ?? "redovni").trim();
     const datumPregleda = parseDate(body?.datumPregleda);
     const napomena = body?.napomena ? String(body.napomena).trim() : null;
+    const rawAparatIds: unknown[] | null = Array.isArray(body?.aparatIds)
+      ? body.aparatIds
+      : null;
+    const aparatIds =
+      rawAparatIds?.map((id: unknown) => String(id).trim()).filter(Boolean) ||
+      null;
 
     if (!firmaId) {
       return new Response("Nedostaje tvrtka.", { status: 400 });
@@ -30,11 +36,22 @@ export async function POST(req: Request) {
       return new Response("Datum pregleda nije ispravan.", { status: 400 });
     }
 
-    const aparati = await prisma.$queryRaw<VatrogasniAparat[]>`
+    if (rawAparatIds && !aparatIds?.length) {
+      return new Response("Odaberi barem jedan vatrogasni aparat.", {
+        status: 400,
+      });
+    }
+
+    const sviAparati = await prisma.$queryRaw<VatrogasniAparat[]>`
       SELECT * FROM "VatrogasniAparat"
       WHERE "firmaId" = ${firmaId}
       ORDER BY "oznaka" ASC
     `;
+
+    const aparatIdSet = aparatIds ? new Set(aparatIds) : null;
+    const aparati = aparatIdSet
+      ? sviAparati.filter((aparat) => aparatIdSet.has(aparat.id))
+      : sviAparati;
 
     if (!aparati.length) {
       return Response.json({ ok: true, updated: 0 });
@@ -45,8 +62,27 @@ export async function POST(req: Request) {
         ? addMonths(datumPregleda, 3)
         : addYears(datumPregleda, 1);
 
-    await prisma.$transaction(
-      aparati.map((aparat) =>
+    const operations = aparati.flatMap((aparat) => {
+      const updateOperation =
+        vrstaPregleda === "redovni"
+          ? prisma.$executeRaw`
+              UPDATE "VatrogasniAparat"
+              SET
+                "datumRedovnogPregleda" = ${datumPregleda},
+                "sljedeciRedovniPregled" = ${sljedeciPregled},
+                "updatedAt" = CURRENT_TIMESTAMP
+              WHERE "id" = ${aparat.id}
+            `
+          : prisma.$executeRaw`
+              UPDATE "VatrogasniAparat"
+              SET
+                "datumPeriodicnogPregleda" = ${datumPregleda},
+                "sljedeciPeriodicniPregled" = ${sljedeciPregled},
+                "updatedAt" = CURRENT_TIMESTAMP
+              WHERE "id" = ${aparat.id}
+            `;
+
+      return [
         prisma.$executeRaw`
           INSERT INTO "VatrogasniAparatPregled" (
             "id",
@@ -70,29 +106,12 @@ export async function POST(req: Request) {
           SET
             "sljedeciPregled" = EXCLUDED."sljedeciPregled",
             "napomena" = EXCLUDED."napomena"
-        `
-      )
-    );
+        `,
+        updateOperation,
+      ];
+    });
 
-    if (vrstaPregleda === "redovni") {
-      await prisma.$executeRaw`
-        UPDATE "VatrogasniAparat"
-        SET
-          "datumRedovnogPregleda" = ${datumPregleda},
-          "sljedeciRedovniPregled" = ${sljedeciPregled},
-          "updatedAt" = CURRENT_TIMESTAMP
-        WHERE "firmaId" = ${firmaId}
-      `;
-    } else {
-      await prisma.$executeRaw`
-        UPDATE "VatrogasniAparat"
-        SET
-          "datumPeriodicnogPregleda" = ${datumPregleda},
-          "sljedeciPeriodicniPregled" = ${sljedeciPregled},
-          "updatedAt" = CURRENT_TIMESTAMP
-        WHERE "firmaId" = ${firmaId}
-      `;
-    }
+    await prisma.$transaction(operations);
 
     return Response.json({
       ok: true,

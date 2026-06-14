@@ -157,6 +157,7 @@ export default function VatrogasniAparatiPage() {
   );
   const [obnovaDatum, setObnovaDatum] = useState("");
   const [obnovaNapomena, setObnovaNapomena] = useState("");
+  const [odabraniAparati, setOdabraniAparati] = useState<string[]>([]);
   const [otvorenaPovijest, setOtvorenaPovijest] = useState<string | null>(null);
   const [preglediPoAparatu, setPreglediPoAparatu] = useState<
     Record<string, Pregled[]>
@@ -251,6 +252,35 @@ export default function VatrogasniAparatiPage() {
       }).length,
     [aparati]
   );
+
+  const odabraniAparatSet = useMemo(
+    () => new Set(odabraniAparati),
+    [odabraniAparati]
+  );
+
+  const sviFiltriraniOdabrani =
+    filtriraniAparati.length > 0 &&
+    filtriraniAparati.every((aparat) => odabraniAparatSet.has(aparat.id));
+
+  const toggleAparat = (id: string) => {
+    setOdabraniAparati((prev) =>
+      prev.includes(id)
+        ? prev.filter((aparatId) => aparatId !== id)
+        : [...prev, id]
+    );
+  };
+
+  const toggleFiltriraneAparate = () => {
+    const filtriraniIds = filtriraniAparati.map((aparat) => aparat.id);
+
+    setOdabraniAparati((prev) => {
+      if (sviFiltriraniOdabrani) {
+        return prev.filter((id) => !filtriraniIds.includes(id));
+      }
+
+      return Array.from(new Set([...prev, ...filtriraniIds]));
+    });
+  };
 
   const spremi = async () => {
     if (!forma.oznaka.trim() || !forma.lokacija.trim()) {
@@ -395,12 +425,17 @@ export default function VatrogasniAparatiPage() {
       return;
     }
 
+    if (!odabraniAparati.length) {
+      alert("OznaÄi barem jedan vatrogasni aparat.");
+      return;
+    }
+
     const label =
       obnovaVrsta === "redovni" ? "redovni pregled" : "periodiÄki pregled";
 
     if (
       !confirm(
-        `Obnoviti ${label} za svih ${aparati.length} vatrogasnih aparata na datum ${formatDate(
+        `Obnoviti ${label} za ${odabraniAparati.length} oznaÄenih vatrogasnih aparata na datum ${formatDate(
           obnovaDatum
         )}?`
       )
@@ -417,6 +452,7 @@ export default function VatrogasniAparatiPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           firmaId,
+          aparatIds: odabraniAparati,
           vrstaPregleda: obnovaVrsta,
           datumPregleda: obnovaDatum,
           napomena: obnovaNapomena.trim() || null,
@@ -430,6 +466,7 @@ export default function VatrogasniAparatiPage() {
 
       const result = await res.json();
       setPreglediPoAparatu({});
+      setOdabraniAparati([]);
       await ucitajSve();
       alert(`Obnovljeno aparata: ${result.updated || 0}`);
     } catch (err) {
@@ -671,6 +708,25 @@ export default function VatrogasniAparatiPage() {
 
       <section style={panelStyle}>
         <h2 style={sectionTitleStyle}>Skupna obnova pregleda</h2>
+        <div style={selectedInfoStyle}>
+          <span>Odabrano aparata: {odabraniAparati.length}</span>
+          <button
+            type="button"
+            style={secondaryButtonStyle}
+            onClick={toggleFiltriraneAparate}
+            disabled={filtriraniAparati.length === 0}
+          >
+            {sviFiltriraniOdabrani ? "PoniÅ¡ti prikazane" : "OznaÄi prikazane"}
+          </button>
+          <button
+            type="button"
+            style={secondaryButtonStyle}
+            onClick={() => setOdabraniAparati([])}
+            disabled={odabraniAparati.length === 0}
+          >
+            PoniÅ¡ti odabir
+          </button>
+        </div>
         <div style={bulkRenewStyle}>
           <Field label="Vrsta pregleda">
             <select
@@ -707,9 +763,9 @@ export default function VatrogasniAparatiPage() {
             type="button"
             style={primaryButtonStyle}
             onClick={obnoviSvePreglede}
-            disabled={obnavljanje || aparati.length === 0}
+            disabled={obnavljanje || odabraniAparati.length === 0}
           >
-            {obnavljanje ? "Obnavljanje..." : "Obnovi sve aparate"}
+            {obnavljanje ? "Obnavljanje..." : "Obnovi odabrane"}
           </button>
         </div>
       </section>
@@ -740,6 +796,14 @@ export default function VatrogasniAparatiPage() {
           <table style={tableStyle}>
             <thead>
               <tr>
+                <th style={thStyle}>
+                  <input
+                    type="checkbox"
+                    checked={sviFiltriraniOdabrani}
+                    onChange={toggleFiltriraneAparate}
+                    aria-label="OznaÄi sve prikazane aparate"
+                  />
+                </th>
                 <th style={thStyle}>Oznaka</th>
                 <th style={thStyle}>Lokacija</th>
                 <th style={thStyle}>Vrsta</th>
@@ -752,7 +816,7 @@ export default function VatrogasniAparatiPage() {
             <tbody>
               {filtriraniAparati.length === 0 ? (
                 <tr>
-                  <td style={tdStyle} colSpan={7}>
+                  <td style={tdStyle} colSpan={8}>
                     Nema vatrogasnih aparata za prikaz.
                   </td>
                 </tr>
@@ -764,6 +828,14 @@ export default function VatrogasniAparatiPage() {
                   return (
                     <Fragment key={aparat.id}>
                       <tr>
+                        <td style={tdStyle}>
+                          <input
+                            type="checkbox"
+                            checked={odabraniAparatSet.has(aparat.id)}
+                            onChange={() => toggleAparat(aparat.id)}
+                            aria-label={`OznaÄi aparat ${aparat.oznaka}`}
+                          />
+                        </td>
                         <td style={tdStyle}>
                           <strong>{aparat.oznaka}</strong>
                           <div style={mutedStyle}>
@@ -837,7 +909,7 @@ export default function VatrogasniAparatiPage() {
                       </tr>
                       {povijestOtvorena ? (
                         <tr>
-                          <td style={historyCellStyle} colSpan={7}>
+                          <td style={historyCellStyle} colSpan={8}>
                             {ucitavanjePovijesti === aparat.id ? (
                               <div style={mutedStyle}>Učitavanje povijesti...</div>
                             ) : pregledi.length === 0 ? (
@@ -1011,6 +1083,16 @@ const actionsStyle: React.CSSProperties = {
   flexWrap: "wrap",
 };
 
+const selectedInfoStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  flexWrap: "wrap",
+  marginBottom: 12,
+  color: "#334155",
+  fontWeight: 800,
+};
+
 const bulkRenewStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "minmax(170px, 220px) minmax(170px, 220px) minmax(220px, 1fr) auto",
@@ -1052,7 +1134,7 @@ const tableWrapStyle: React.CSSProperties = {
 const tableStyle: React.CSSProperties = {
   width: "100%",
   borderCollapse: "collapse",
-  minWidth: 920,
+  minWidth: 980,
 };
 
 const thStyle: React.CSSProperties = {
