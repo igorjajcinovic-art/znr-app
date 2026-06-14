@@ -426,16 +426,16 @@ export default function VatrogasniAparatiPage() {
     }
 
     if (!odabraniAparati.length) {
-      alert("OznaÄi barem jedan vatrogasni aparat.");
+      alert("Označi barem jedan vatrogasni aparat.");
       return;
     }
 
     const label =
-      obnovaVrsta === "redovni" ? "redovni pregled" : "periodiÄki pregled";
+      obnovaVrsta === "redovni" ? "redovni pregled" : "periodički pregled";
 
     if (
       !confirm(
-        `Obnoviti ${label} za ${odabraniAparati.length} oznaÄenih vatrogasnih aparata na datum ${formatDate(
+        `Obnoviti ${label} za ${odabraniAparati.length} označenih vatrogasnih aparata na datum ${formatDate(
           obnovaDatum
         )}?`
       )
@@ -470,7 +470,7 @@ export default function VatrogasniAparatiPage() {
       await ucitajSve();
       alert(`Obnovljeno aparata: ${result.updated || 0}`);
     } catch (err) {
-      setGreska(err instanceof Error ? err.message : "GreÅ¡ka pri obnovi pregleda.");
+      setGreska(err instanceof Error ? err.message : "Greška pri obnovi pregleda.");
     } finally {
       setObnavljanje(false);
     }
@@ -716,7 +716,7 @@ export default function VatrogasniAparatiPage() {
             onClick={toggleFiltriraneAparate}
             disabled={filtriraniAparati.length === 0}
           >
-            {sviFiltriraniOdabrani ? "PoniÅ¡ti prikazane" : "OznaÄi prikazane"}
+            {sviFiltriraniOdabrani ? "Poništi prikazane" : "Označi prikazane"}
           </button>
           <button
             type="button"
@@ -724,7 +724,7 @@ export default function VatrogasniAparatiPage() {
             onClick={() => setOdabraniAparati([])}
             disabled={odabraniAparati.length === 0}
           >
-            PoniÅ¡ti odabir
+            Poništi odabir
           </button>
         </div>
         <div style={bulkRenewStyle}>
@@ -737,7 +737,7 @@ export default function VatrogasniAparatiPage() {
               }
             >
               <option value="redovni">Redovni pregled</option>
-              <option value="periodicni">PeriodiÄki pregled</option>
+              <option value="periodicni">Periodički pregled</option>
             </select>
           </Field>
 
@@ -801,7 +801,7 @@ export default function VatrogasniAparatiPage() {
                     type="checkbox"
                     checked={sviFiltriraniOdabrani}
                     onChange={toggleFiltriraneAparate}
-                    aria-label="OznaÄi sve prikazane aparate"
+                    aria-label="Označi sve prikazane aparate"
                   />
                 </th>
                 <th style={thStyle}>Oznaka</th>
@@ -833,7 +833,7 @@ export default function VatrogasniAparatiPage() {
                             type="checkbox"
                             checked={odabraniAparatSet.has(aparat.id)}
                             onChange={() => toggleAparat(aparat.id)}
-                            aria-label={`OznaÄi aparat ${aparat.oznaka}`}
+                            aria-label={`Označi aparat ${aparat.oznaka}`}
                           />
                         </td>
                         <td style={tdStyle}>
