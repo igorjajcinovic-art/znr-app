@@ -25,6 +25,17 @@ export async function PUT(
 
     const rokZamjene = parseHrDate(body?.rokZamjene);
 
+    const aktivniRadnik = await prisma.radnik.findFirst({
+      where: { firmaId, oib, aktivan: true },
+      select: { id: true },
+    });
+
+    if (!aktivniRadnik) {
+      return new Response("OZO se može dodati samo aktivnom radniku.", {
+        status: 400,
+      });
+    }
+
     const zapis = await prisma.oprema.update({
       where: { id },
       data: {

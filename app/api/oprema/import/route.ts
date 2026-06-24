@@ -61,6 +61,11 @@ export async function POST(req: Request) {
 
     let imported = 0;
     let skipped = 0;
+    const aktivniRadnici = await prisma.radnik.findMany({
+      where: { firmaId, aktivan: true },
+      select: { oib: true },
+    });
+    const aktivniOibSet = new Set(aktivniRadnici.map((radnik) => radnik.oib));
 
     for (const row of rows) {
       const oib = String(row.oib ?? "").trim();
@@ -72,7 +77,7 @@ export async function POST(req: Request) {
       const kolicina =
         Number.isNaN(kolicinaRaw) || kolicinaRaw < 1 ? 1 : kolicinaRaw;
 
-      if (!oib || !vrsta || !datumIzdavanja) {
+      if (!oib || !vrsta || !datumIzdavanja || !aktivniOibSet.has(oib)) {
         skipped += 1;
         continue;
       }

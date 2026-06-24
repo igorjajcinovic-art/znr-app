@@ -9,6 +9,7 @@ type Radnik = {
   firmaId: string;
   ime: string;
   oib: string;
+  aktivan: boolean;
 };
 
 type Tvrtka = {
@@ -406,6 +407,11 @@ export default function OpremaPage() {
     }
   };
 
+  const aktivniRadnici = useMemo(
+    () => radnici.filter((radnik) => radnik.aktivan),
+    [radnici]
+  );
+
   const filtriranaOprema = useMemo(() => {
     return oprema.filter((z) => {
       const radnik = radnici.find((r) => r.oib === z.oib);
@@ -436,6 +442,11 @@ export default function OpremaPage() {
 
     if (!forma.oib || !forma.vrsta || !forma.datumIzdavanja) {
       alert("Unesi radnika, vrstu i datum izdavanja.");
+      return;
+    }
+
+    if (!aktivniRadnici.some((radnik) => radnik.oib === forma.oib)) {
+      alert("OZO se može dodati samo aktivnom radniku.");
       return;
     }
 
@@ -613,7 +624,7 @@ export default function OpremaPage() {
                 onChange={(e) => setForma({ ...forma, oib: e.target.value })}
               >
                 <option value="">Odaberi radnika</option>
-                {radnici.map((r) => (
+                {aktivniRadnici.map((r) => (
                   <option key={r.id} value={r.oib}>
                     {r.ime} ({r.oib})
                   </option>
