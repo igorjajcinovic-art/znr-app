@@ -10,6 +10,8 @@ type RadnikIspis = {
   datumOdjave: Date | null;
   grad: string | null;
   ulica: string | null;
+  imaDozvolu: boolean;
+  dozvolaDo: Date | null;
 };
 
 function escapeHtml(value: string | number | null | undefined) {
@@ -65,7 +67,9 @@ export async function GET(req: Request) {
               "datumZaposlenja",
               "datumOdjave",
               "grad",
-              "ulica"
+              "ulica",
+              "imaDozvolu",
+              "dozvolaDo"
             FROM "Radnik"
             WHERE "firmaId" = ${firmaId} AND "aktivan" = true
             ORDER BY "ime" ASC
@@ -80,7 +84,9 @@ export async function GET(req: Request) {
               "datumZaposlenja",
               "datumOdjave",
               "grad",
-              "ulica"
+              "ulica",
+              "imaDozvolu",
+              "dozvolaDo"
             FROM "Radnik"
             WHERE "firmaId" = ${firmaId} AND "aktivan" = false
             ORDER BY "ime" ASC
@@ -94,7 +100,9 @@ export async function GET(req: Request) {
               "datumZaposlenja",
               "datumOdjave",
               "grad",
-              "ulica"
+              "ulica",
+              "imaDozvolu",
+              "dozvolaDo"
             FROM "Radnik"
             WHERE "firmaId" = ${firmaId}
             ORDER BY "ime" ASC
@@ -138,6 +146,7 @@ export async function GET(req: Request) {
             <th>Adresa</th>
             <th>Datum početka rada</th>
             <th>Datum odjave</th>
+            <th>Radna dozvola vrijedi do</th>
           </tr>
 
           ${radnici
@@ -153,6 +162,7 @@ export async function GET(req: Request) {
                 <td>${escapeHtml(adresa)}</td>
                 <td>${escapeHtml(formatDate(r.datumZaposlenja))}</td>
                 <td>${escapeHtml(formatDate(r.datumOdjave))}</td>
+                <td>${escapeHtml(r.imaDozvolu ? formatDate(r.dozvolaDo) : "-")}</td>
               </tr>
             `;
               }
