@@ -132,7 +132,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
       <section style={statsGridStyle}>
         <Metric label="Liječnički" value={lijecnicki.length} />
         <Metric label="Osposobljavanja" value={osposobljavanja.length} />
-        <Metric label="OZO stavke" value={ozo.length} />
+        <Metric label="OZO zaduženja" value={ozo.length} />
         <Metric label="Upozorenja" value={kriticno + uskoro} tone={kriticno > 0 ? "danger" : uskoro > 0 ? "warning" : "ok"} />
       </section>
 
@@ -212,17 +212,24 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
           ))}
         </RecordPanel>
 
-        <RecordPanel title="OZO oprema" empty="Nema zadužene OZO opreme.">
+        <RecordPanel title="Arhiva zaduženja OZO opreme" empty="Nema zadužene OZO opreme.">
           {ozo.map((item) => (
             <RecordRow
               key={item.id}
               title={item.vrsta}
-              meta={`Količina: ${item.kolicina}${item.napomena ? ` · ${item.napomena}` : ""}`}
+              meta={`Izdano: ${formatHrDate(item.datumIzdavanja)} · Količina: ${item.kolicina}${item.napomena ? ` · ${item.napomena}` : ""}`}
               dateLabel="Rok zamjene"
               date={item.rokZamjene}
               status={deadlineStatus(item.rokZamjene)}
             />
           ))}
+        </RecordPanel>
+
+        <RecordPanel
+          title="Arhiva zaduženja radne opreme"
+          empty="Radna oprema/strojevi još nisu vezani uz pojedinog radnika."
+        >
+          {null}
         </RecordPanel>
       </section>
     </div>
