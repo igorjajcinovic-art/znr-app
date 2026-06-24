@@ -39,6 +39,10 @@ function statusRoka(value: Date | string | null | undefined) {
   return `Važi još ${diff} dana`;
 }
 
+function statusZaduzenja(value: string | null | undefined) {
+  return value === "razduzeno" ? "Razduženo" : "Aktivno";
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -91,6 +95,7 @@ export async function GET(req: Request) {
             <th>Količina</th>
             <th>Rok zamjene</th>
             <th>Status</th>
+            <th>Status zaduženja</th>
             <th>Napomena</th>
           </tr>
 
@@ -105,6 +110,7 @@ export async function GET(req: Request) {
                 <td>${z.kolicina}</td>
                 <td>${formatDate(z.rokZamjene)}</td>
                 <td>${statusRoka(z.rokZamjene)}</td>
+                <td>${statusZaduzenja(z.status)}</td>
                 <td>${z.napomena || ""}</td>
               </tr>
             `

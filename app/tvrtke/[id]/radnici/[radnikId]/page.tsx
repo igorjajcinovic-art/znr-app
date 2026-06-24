@@ -217,7 +217,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
             <RecordRow
               key={item.id}
               title={item.vrsta}
-              meta={`Izdano: ${formatHrDate(item.datumIzdavanja)} · Količina: ${item.kolicina}${item.napomena ? ` · ${item.napomena}` : ""}`}
+              meta={`Izdano: ${formatHrDate(item.datumIzdavanja)} · Status: ${item.status === "razduzeno" ? "Razduženo" : "Aktivno"} · Količina: ${item.kolicina}${item.napomena ? ` · ${item.napomena}` : ""}`}
               dateLabel="Rok zamjene"
               date={item.rokZamjene}
               status={deadlineStatus(item.rokZamjene)}

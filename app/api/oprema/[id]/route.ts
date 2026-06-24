@@ -56,6 +56,33 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const status = String(body?.status ?? "").trim();
+
+    if (!["aktivno", "razduzeno"].includes(status)) {
+      return new Response("Status zaduženja nije ispravan.", { status: 400 });
+    }
+
+    const zapis = await prisma.oprema.update({
+      where: { id },
+      data: { status },
+    });
+
+    return Response.json(zapis);
+  } catch (error) {
+    console.error(error);
+    return new Response("Ne mogu promijeniti status zaduženja.", {
+      status: 500,
+    });
+  }
+}
+
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

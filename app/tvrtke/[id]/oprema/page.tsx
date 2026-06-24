@@ -27,6 +27,7 @@ type Oprema = {
   datumIzdavanja: string;
   kolicina: number;
   rokZamjene: string | null;
+  status: string;
   napomena: string | null;
 };
 
@@ -71,6 +72,7 @@ export default function OpremaPage() {
   const [filterRadnik, setFilterRadnik] = useState("");
   const [filterVrsta, setFilterVrsta] = useState("");
   const [filterRok, setFilterRok] = useState("svi");
+  const [filterZaduzenje, setFilterZaduzenje] = useState("aktivno");
 
   const [ucitavanje, setUcitavanje] = useState(true);
   const [spremanje, setSpremanje] = useState(false);
@@ -242,6 +244,7 @@ export default function OpremaPage() {
       "Količina",
       "Rok zamjene",
       "Status",
+      "Status zaduženja",
       "Napomena",
     ];
 
@@ -256,6 +259,7 @@ export default function OpremaPage() {
         z.kolicina,
         formatDate(z.rokZamjene),
         statusRoka(z.rokZamjene).text,
+        z.status === "razduzeno" ? "Razduženo" : "Aktivno",
         z.napomena || "",
       ];
     });
@@ -407,6 +411,22 @@ export default function OpremaPage() {
     }
   };
 
+  const statusZaduzenja = (value: string | null | undefined) =>
+    value === "razduzeno" ? "Razduženo" : "Aktivno";
+
+  const statusZaduzenjaStyle = (value: string | null | undefined): React.CSSProperties =>
+    value === "razduzeno"
+      ? {
+          background: "#e2e8f0",
+          color: "#475569",
+          border: "1px solid #cbd5e1",
+        }
+      : {
+          background: "#dcfce7",
+          color: "#166534",
+          border: "1px solid #4ade80",
+        };
+
   const aktivniRadnici = useMemo(
     () => radnici.filter((radnik) => radnik.aktivan),
     [radnici]
@@ -430,9 +450,15 @@ export default function OpremaPage() {
         (filterRok === "uskoro" && level === "warning") ||
         (filterRok === "vazeci" && level === "ok");
 
-      return okRadnik && okVrsta && okRok;
+      const status = z.status || "aktivno";
+      const okZaduzenje =
+        filterZaduzenje === "svi" ||
+        (filterZaduzenje === "aktivno" && status === "aktivno") ||
+        (filterZaduzenje === "razduzeno" && status === "razduzeno");
+
+      return okRadnik && okVrsta && okRok && okZaduzenje;
     });
-  }, [oprema, radnici, filterRadnik, filterVrsta, filterRok]);
+  }, [oprema, radnici, filterRadnik, filterVrsta, filterRok, filterZaduzenje]);
 
   const spremi = async () => {
     if (!firmaId) {
@@ -527,6 +553,39 @@ export default function OpremaPage() {
       await ucitajSve();
     } catch (err) {
       setGreska(err instanceof Error ? err.message : "Greška pri brisanju.");
+    }
+  };
+
+  const promijeniStatusZaduzenja = async (
+    id: string,
+    status: "aktivno" | "razduzeno"
+  ) => {
+    const poruka =
+      status === "razduzeno"
+        ? "Razdužiti ovu opremu i ostaviti zapis u arhivi?"
+        : "Vratiti ovu opremu među aktivna zaduženja?";
+
+    if (!confirm(poruka)) return;
+
+    try {
+      const res = await fetch(`/api/oprema/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Ne mogu promijeniti status zaduženja.");
+      }
+
+      await ucitajSve();
+    } catch (err) {
+      setGreska(
+        err instanceof Error
+          ? err.message
+          : "Greška pri promjeni statusa zaduženja."
+      );
     }
   };
 
@@ -758,6 +817,19 @@ export default function OpremaPage() {
                 <option value="vazeci">Važeći</option>
               </select>
             </div>
+
+            <div>
+              <label style={labelStyle}>Zaduženje</label>
+              <select
+                style={inputStyle}
+                value={filterZaduzenje}
+                onChange={(e) => setFilterZaduzenje(e.target.value)}
+              >
+                <option value="aktivno">Aktivna zaduženja</option>
+                <option value="razduzeno">Arhiva razduženih</option>
+                <option value="svi">Sva zaduženja</option>
+              </select>
+            </div>
           </div>
 
           <div style={tableWrapStyle}>
@@ -770,6 +842,7 @@ export default function OpremaPage() {
                   <th style={thStyle}>Količina</th>
                   <th style={thStyle}>Rok zamjene</th>
                   <th style={thStyle}>Status</th>
+                  <th style={thStyle}>Zaduženje</th>
                   <th style={thStyle}>Napomena</th>
                   <th style={thStyle}>Akcije</th>
                 </tr>
@@ -777,7 +850,7 @@ export default function OpremaPage() {
               <tbody>
                 {filtriranaOprema.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={tdCenterStyle}>
+                    <td colSpan={9} style={tdCenterStyle}>
                       Nema zapisa.
                     </td>
                   </tr>
@@ -803,6 +876,11 @@ export default function OpremaPage() {
                             {statusRoka(z.rokZamjene).text}
                           </span>
                         </td>
+                        <td style={tdStyle}>
+                          <span style={{ ...pillStyle, ...statusZaduzenjaStyle(z.status) }}>
+                            {statusZaduzenja(z.status)}
+                          </span>
+                        </td>
                         <td style={tdStyle}>{z.napomena || "-"}</td>
                         <td style={tdStyle}>
                           <div style={tableActionsStyle}>
@@ -811,6 +889,17 @@ export default function OpremaPage() {
                               onClick={() => pokreniUredenje(z)}
                             >
                               Uredi
+                            </button>
+                            <button
+                              style={smallDarkButtonStyle}
+                              onClick={() =>
+                                promijeniStatusZaduzenja(
+                                  z.id,
+                                  z.status === "razduzeno" ? "aktivno" : "razduzeno"
+                                )
+                              }
+                            >
+                              {z.status === "razduzeno" ? "Aktiviraj" : "Razduži"}
                             </button>
                             <button
                               style={smallRedButtonStyle}
@@ -917,7 +1006,7 @@ const formGridStyle: React.CSSProperties = {
 
 const filterGridStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
   gap: 16,
   marginBottom: 20,
 };
@@ -964,7 +1053,7 @@ const tableWrapStyle: React.CSSProperties = {
 const tableStyle: React.CSSProperties = {
   width: "100%",
   borderCollapse: "collapse",
-  minWidth: 950,
+  minWidth: 1080,
 };
 
 const thStyle: React.CSSProperties = {
@@ -1042,6 +1131,16 @@ const smallGrayButtonStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "none",
   background: "#9ca3af",
+  color: "white",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const smallDarkButtonStyle: React.CSSProperties = {
+  padding: "8px 10px",
+  borderRadius: 8,
+  border: "none",
+  background: "#111827",
   color: "white",
   fontWeight: 700,
   cursor: "pointer",
