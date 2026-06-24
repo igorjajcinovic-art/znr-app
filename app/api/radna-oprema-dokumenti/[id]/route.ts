@@ -19,12 +19,15 @@ export async function DELETE(
       return new Response("Dokument nije pronađen.", { status: 404 });
     }
 
-    const absolutePath = path.join(process.cwd(), "public", dokument.fileUrl);
+    if (!dokument.fileUrl.startsWith("data:")) {
+      const relativeFileUrl = dokument.fileUrl.replace(/^\/+/, "");
+      const absolutePath = path.join(process.cwd(), "public", relativeFileUrl);
 
-    try {
-      await unlink(absolutePath);
-    } catch {
-      // ako file fizički ne postoji, svejedno brišemo zapis iz baze
+      try {
+        await unlink(absolutePath);
+      } catch {
+        // Ako datoteka fizički ne postoji, svejedno brišemo zapis iz baze.
+      }
     }
 
     await prisma.radnaOpremaDokument.delete({

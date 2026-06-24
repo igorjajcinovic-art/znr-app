@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 
 export const runtime = "nodejs";
@@ -102,20 +101,7 @@ export async function POST(req: Request) {
     );
     const uniqueName = `${Date.now()}-${safeOriginal}${extension}`;
 
-    const targetDir = path.join(
-      process.cwd(),
-      "public",
-      "uploads",
-      "radna-oprema",
-      radnaOpremaId
-    );
-
-    await mkdir(targetDir, { recursive: true });
-
-    const targetPath = path.join(targetDir, uniqueName);
-    await writeFile(targetPath, buffer);
-
-    const fileUrl = `/uploads/radna-oprema/${radnaOpremaId}/${uniqueName}`;
+    const fileUrl = `data:${file.type || "application/octet-stream"};base64,${buffer.toString("base64")}`;
 
     const dokument = await prisma.radnaOpremaDokument.create({
       data: {
