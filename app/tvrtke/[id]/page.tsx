@@ -273,6 +273,11 @@ export default function TvrtkaDetaljiPage() {
     [radnici]
   );
 
+  const brojAktivnihSRadnomDozvolom = useMemo(
+    () => radnici.filter((r) => r.aktivan && r.imaDozvolu).length,
+    [radnici]
+  );
+
   const brojNeaktivnih = useMemo(
     () => radnici.filter((r) => !r.aktivan).length,
     [radnici]
@@ -508,6 +513,10 @@ export default function TvrtkaDetaljiPage() {
         <div style={statsGridStyle}>
           <StatKartica naslov="Ukupno radnika" vrijednost={radnici.length} />
           <StatKartica naslov="Aktivni radnici" vrijednost={brojAktivnih} />
+          <StatKartica
+            naslov="Aktivni s radnom dozvolom"
+            vrijednost={brojAktivnihSRadnomDozvolom}
+          />
           <StatKartica naslov="Neaktivni radnici" vrijednost={brojNeaktivnih} />
           <StatKartica
             naslov="Dozvole - upozorenja"

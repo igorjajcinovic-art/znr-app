@@ -80,6 +80,9 @@ export default async function Page() {
     (sum, value) => sum + value,
     0
   );
+  const aktivniSRadnomDozvolom = aktivniRadnici.filter(
+    (r) => r.imaDozvolu
+  ).length;
 
   const rokovi: RokItem[] = [
     ...aktivniRadnici
@@ -194,6 +197,11 @@ export default async function Page() {
         <StatCard
           label="Aktivni radnici"
           value={aktivniRadnici.length}
+          href="/tvrtke"
+        />
+        <StatCard
+          label="Aktivni s radnom dozvolom"
+          value={aktivniSRadnomDozvolom}
           href="/tvrtke"
         />
         <StatCard
