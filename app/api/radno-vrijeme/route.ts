@@ -30,10 +30,28 @@ export async function GET(req: Request) {
       return new Response("Nedostaje firmaId.", { status: 400 });
     }
 
+    const aktivniRadnici = await prisma.radnik.findMany({
+      where: {
+        firmaId,
+        aktivan: true,
+        ...(radnikId ? { id: radnikId } : {}),
+      },
+      select: { id: true, oib: true },
+    });
+    const aktivniRadnikIds = aktivniRadnici.map((radnik) => radnik.id);
+    const aktivniOibovi = aktivniRadnici.map((radnik) => radnik.oib);
+
+    if (radnikId && aktivniRadnikIds.length === 0) {
+      return Response.json([]);
+    }
+
     const data = await prisma.radnoVrijeme.findMany({
       where: {
         firmaId,
-        ...(radnikId ? { radnikId } : {}),
+        OR: [
+          { radnikId: { in: aktivniRadnikIds } },
+          { oib: { in: aktivniOibovi } },
+        ],
       },
       orderBy: [{ datum: "desc" }, { pocetak: "asc" }, { createdAt: "desc" }],
     });
