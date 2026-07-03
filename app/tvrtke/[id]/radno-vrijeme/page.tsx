@@ -27,13 +27,21 @@ type RadnoVrijeme = {
   datum: string;
   pocetak: string;
   kraj: string;
-  pauzaMin: number;
   ukupnoMin: number;
   status: string;
   napomena: string | null;
 };
 
-type Forma = {
+type DayInfo = {
+  iso: string;
+  day: number;
+  weekday: string;
+  isSunday: boolean;
+  isHoliday: boolean;
+  holidayName: string;
+};
+
+type CellDraft = {
   radnikId: string;
   datum: string;
   pocetak: string;
@@ -42,14 +50,130 @@ type Forma = {
   napomena: string;
 };
 
-const praznaForma: Forma = {
-  radnikId: "",
-  datum: "",
-  pocetak: "08:00",
-  kraj: "16:00",
-  status: "evidentirano",
-  napomena: "",
-};
+const DEFAULT_START = "08:00";
+const DEFAULT_END = "16:00";
+const WEEKDAYS = ["ned", "pon", "uto", "sri", "cet", "pet", "sub"];
+
+function todayMonth() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}`;
+}
+
+function localIso(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function addDays(date: Date, days: number) {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + days);
+  return copy;
+}
+
+function easterDate(year: number) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+}
+
+function croatianHolidays(year: number) {
+  const easter = easterDate(year);
+  const holidays = new Map<string, string>();
+
+  [
+    ["01-01", "Nova godina"],
+    ["01-06", "Sveta tri kralja"],
+    ["05-01", "Praznik rada"],
+    ["05-30", "Dan drzavnosti"],
+    ["06-22", "Dan antifasisticke borbe"],
+    ["08-05", "Dan pobjede"],
+    ["08-15", "Velika Gospa"],
+    ["11-01", "Svi sveti"],
+    ["11-18", "Dan sjecanja"],
+    ["12-25", "Bozic"],
+    ["12-26", "Sveti Stjepan"],
+  ].forEach(([date, name]) => holidays.set(`${year}-${date}`, name));
+
+  holidays.set(localIso(easter), "Uskrs");
+  holidays.set(localIso(addDays(easter, 1)), "Uskrsni ponedjeljak");
+  holidays.set(localIso(addDays(easter, 60)), "Tijelovo");
+
+  return holidays;
+}
+
+function monthDays(month: string): DayInfo[] {
+  const [yearText, monthText] = month.split("-");
+  const year = Number(yearText);
+  const monthIndex = Number(monthText) - 1;
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const holidays = croatianHolidays(year);
+
+  return Array.from({ length: daysInMonth }, (_, index) => {
+    const date = new Date(year, monthIndex, index + 1);
+    const iso = localIso(date);
+    const holidayName = holidays.get(iso) || "";
+
+    return {
+      iso,
+      day: index + 1,
+      weekday: WEEKDAYS[date.getDay()],
+      isSunday: date.getDay() === 0,
+      isHoliday: Boolean(holidayName),
+      holidayName,
+    };
+  });
+}
+
+function cellKey(radnikId: string, datum: string) {
+  return `${radnikId}|${datum}`;
+}
+
+function toInputDate(value: string | null) {
+  if (!value) return "";
+  if (value.includes("T")) return value.split("T")[0];
+  return value;
+}
+
+function parseMinutes(value: string) {
+  const match = value.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function calculateMinutes(pocetak: string, kraj: string) {
+  const start = parseMinutes(pocetak);
+  const end = parseMinutes(kraj);
+  if (start === null || end === null) return 0;
+  return end >= start ? end - start : end + 24 * 60 - start;
+}
+
+function formatMinutes(minutes: number) {
+  const safe = Number.isFinite(minutes) ? Math.max(0, minutes) : 0;
+  const h = Math.floor(safe / 60);
+  const m = safe % 60;
+  return `${h}:${String(m).padStart(2, "0")}`;
+}
+
+function csvEscape(value: string | number | null | undefined) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
 
 export default function RadnoVrijemePage() {
   const params = useParams();
@@ -59,24 +183,29 @@ export default function RadnoVrijemePage() {
   const [tvrtka, setTvrtka] = useState<Tvrtka | null>(null);
   const [radnici, setRadnici] = useState<Radnik[]>([]);
   const [zapisi, setZapisi] = useState<RadnoVrijeme[]>([]);
-  const [forma, setForma] = useState<Forma>(praznaForma);
-  const [editId, setEditId] = useState<string | null>(null);
+  const [mjesec, setMjesec] = useState(todayMonth());
   const [filterRadnik, setFilterRadnik] = useState("");
-  const [filterMjesec, setFilterMjesec] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, CellDraft>>({});
   const [ucitavanje, setUcitavanje] = useState(true);
   const [spremanje, setSpremanje] = useState(false);
   const [greska, setGreska] = useState("");
+  const [poruka, setPoruka] = useState("");
 
   useEffect(() => {
     if (!firmaId) return;
     ucitajSve();
   }, [firmaId]);
 
+  useEffect(() => {
+    setDrafts({});
+    setPoruka("");
+  }, [mjesec]);
+
   const ucitajSve = async () => {
     try {
       setUcitavanje(true);
       setGreska("");
+      setPoruka("");
 
       const [tvrtkeRes, radniciRes, vrijemeRes] = await Promise.all([
         fetch("/api/tvrtke", { cache: "no-store" }),
@@ -88,10 +217,10 @@ export default function RadnoVrijemePage() {
         }),
       ]);
 
-      if (!tvrtkeRes.ok) throw new Error("Ne mogu učitati tvrtku.");
-      if (!radniciRes.ok) throw new Error("Ne mogu učitati radnike.");
+      if (!tvrtkeRes.ok) throw new Error("Ne mogu ucitati tvrtku.");
+      if (!radniciRes.ok) throw new Error("Ne mogu ucitati radnike.");
       if (!vrijemeRes.ok) {
-        throw new Error("Ne mogu učitati evidenciju radnog vremena.");
+        throw new Error("Ne mogu ucitati evidenciju radnog vremena.");
       }
 
       const sveTvrtke: Tvrtka[] = await tvrtkeRes.json();
@@ -99,22 +228,37 @@ export default function RadnoVrijemePage() {
       const vrijemeData: RadnoVrijeme[] = await vrijemeRes.json();
       const nadenaTvrtka = sveTvrtke.find((t) => t.id === firmaId) || null;
 
-      if (!nadenaTvrtka) throw new Error("Tvrtka nije pronađena.");
+      if (!nadenaTvrtka) throw new Error("Tvrtka nije pronadena.");
 
       setTvrtka(nadenaTvrtka);
       setRadnici(radniciData);
       setZapisi(vrijemeData);
     } catch (err) {
-      setGreska(err instanceof Error ? err.message : "Greška pri učitavanju.");
+      setGreska(err instanceof Error ? err.message : "Greska pri ucitavanju.");
     } finally {
       setUcitavanje(false);
     }
   };
 
+  const dani = useMemo(() => monthDays(mjesec), [mjesec]);
+
   const aktivniRadnici = useMemo(
-    () => radnici.filter((radnik) => radnik.aktivan),
+    () =>
+      radnici
+        .filter((radnik) => radnik.aktivan)
+        .sort((a, b) => a.ime.localeCompare(b.ime, "hr")),
     [radnici]
   );
+
+  const prikazaniRadnici = useMemo(() => {
+    const needle = filterRadnik.trim().toLowerCase();
+    if (!needle) return aktivniRadnici;
+
+    return aktivniRadnici.filter(
+      (radnik) =>
+        radnik.ime.toLowerCase().includes(needle) || radnik.oib.includes(needle)
+    );
+  }, [aktivniRadnici, filterRadnik]);
 
   const radnikPoId = useMemo(
     () => new Map(radnici.map((radnik) => [radnik.id, radnik])),
@@ -126,172 +270,208 @@ export default function RadnoVrijemePage() {
     [radnici]
   );
 
-  const formatDate = (value: string | null) => {
-    if (!value) return "-";
-    const d = new Date(value);
-    if (!Number.isNaN(d.getTime())) {
-      return `${String(d.getUTCDate()).padStart(2, "0")}.${String(
-        d.getUTCMonth() + 1
-      ).padStart(2, "0")}.${d.getUTCFullYear()}.`;
-    }
-    return value;
-  };
+  const zapisiPoCeliji = useMemo(() => {
+    const map = new Map<string, RadnoVrijeme>();
 
-  const toInputDate = (value: string | null) => {
-    if (!value) return "";
-    if (value.includes("T")) return value.split("T")[0];
-    return value;
-  };
-
-  const formatMinutes = (minutes: number) => {
-    const safe = Number.isFinite(minutes) ? Math.max(0, minutes) : 0;
-    const h = Math.floor(safe / 60);
-    const m = safe % 60;
-    return `${h}:${String(m).padStart(2, "0")}`;
-  };
-
-  const statusLabel = (status: string) =>
-    status === "zakljuceno" ? "Zaključeno" : "Evidentirano";
-
-  const filtriraniZapisi = useMemo(() => {
-    return zapisi.filter((zapis) => {
+    zapisi.forEach((zapis) => {
       const radnik =
         (zapis.radnikId ? radnikPoId.get(zapis.radnikId) : null) ||
         radnikPoOib.get(zapis.oib);
-      const datumIso = toInputDate(zapis.datum);
+      const datum = toInputDate(zapis.datum);
 
-      const okRadnik =
-        !filterRadnik ||
-        (radnik?.ime || zapis.oib)
-          .toLowerCase()
-          .includes(filterRadnik.toLowerCase()) ||
-        zapis.oib.includes(filterRadnik);
-      const okMjesec = !filterMjesec || datumIso.startsWith(filterMjesec);
-      const okStatus = !filterStatus || zapis.status === filterStatus;
-
-      return okRadnik && okMjesec && okStatus;
+      if (!radnik || !datum.startsWith(mjesec)) return;
+      map.set(cellKey(radnik.id, datum), zapis);
     });
-  }, [zapisi, radnikPoId, radnikPoOib, filterRadnik, filterMjesec, filterStatus]);
 
-  const ukupnoMinuta = filtriraniZapisi.reduce(
-    (sum, zapis) => sum + (zapis.ukupnoMin || 0),
+    return map;
+  }, [zapisi, radnikPoId, radnikPoOib, mjesec]);
+
+  const getCellValue = (radnikId: string, day: DayInfo) => {
+    const key = cellKey(radnikId, day.iso);
+    const draft = drafts[key];
+    const existing = zapisiPoCeliji.get(key);
+
+    if (draft) {
+      return {
+        pocetak: draft.pocetak,
+        kraj: draft.kraj,
+        napomena: draft.napomena,
+        status: draft.status,
+        source: "draft" as const,
+      };
+    }
+
+    if (existing) {
+      return {
+        pocetak: existing.pocetak,
+        kraj: existing.kraj,
+        napomena: existing.napomena || "",
+        status: existing.status || "evidentirano",
+        source: "saved" as const,
+      };
+    }
+
+    if (!day.isSunday && !day.isHoliday) {
+      return {
+        pocetak: DEFAULT_START,
+        kraj: DEFAULT_END,
+        napomena: "",
+        status: "evidentirano",
+        source: "suggested" as const,
+      };
+    }
+
+    return {
+      pocetak: "",
+      kraj: "",
+      napomena: "",
+      status: "evidentirano",
+      source: "empty" as const,
+    };
+  };
+
+  const updateCell = (
+    radnikId: string,
+    day: DayInfo,
+    field: "pocetak" | "kraj" | "napomena",
+    value: string
+  ) => {
+    const key = cellKey(radnikId, day.iso);
+    const current = getCellValue(radnikId, day);
+
+    setDrafts((prev) => ({
+      ...prev,
+      [key]: {
+        radnikId,
+        datum: day.iso,
+        pocetak: field === "pocetak" ? value : current.pocetak,
+        kraj: field === "kraj" ? value : current.kraj,
+        status: current.status,
+        napomena: field === "napomena" ? value : current.napomena,
+      },
+    }));
+  };
+
+  const clearCell = (radnikId: string, day: DayInfo) => {
+    const key = cellKey(radnikId, day.iso);
+    setDrafts((prev) => ({
+      ...prev,
+      [key]: {
+        radnikId,
+        datum: day.iso,
+        pocetak: "",
+        kraj: "",
+        status: "evidentirano",
+        napomena: "",
+      },
+    }));
+  };
+
+  const popuniRadneDane = () => {
+    setDrafts((prev) => {
+      const next = { ...prev };
+
+      prikazaniRadnici.forEach((radnik) => {
+        dani.forEach((day) => {
+          if (day.isSunday || day.isHoliday) return;
+
+          const key = cellKey(radnik.id, day.iso);
+          if (next[key] || zapisiPoCeliji.has(key)) return;
+
+          next[key] = {
+            radnikId: radnik.id,
+            datum: day.iso,
+            pocetak: DEFAULT_START,
+            kraj: DEFAULT_END,
+            status: "evidentirano",
+            napomena: "",
+          };
+        });
+      });
+
+      return next;
+    });
+  };
+
+  const rowTotal = (radnikId: string) =>
+    dani.reduce((sum, day) => {
+      const value = getCellValue(radnikId, day);
+      if (!value.pocetak || !value.kraj) return sum;
+      return sum + calculateMinutes(value.pocetak, value.kraj);
+    }, 0);
+
+  const mjesecTotal = prikazaniRadnici.reduce(
+    (sum, radnik) => sum + rowTotal(radnik.id),
     0
   );
-  const ukupnoPrekovremeno = filtriraniZapisi.reduce((sum, zapis) => {
-    return sum + Math.max(0, (zapis.ukupnoMin || 0) - 8 * 60);
-  }, 0);
 
-  const spremi = async () => {
-    if (!firmaId || !forma.radnikId || !forma.datum || !forma.pocetak || !forma.kraj) {
-      alert("Odaberi radnika, datum, početak i kraj rada.");
+  const changedCount = Object.keys(drafts).length;
+
+  const spremiIzmjene = async () => {
+    const entries = Object.values(drafts);
+
+    if (entries.length === 0) {
+      setPoruka("Nema izmjena za spremanje.");
       return;
     }
 
     try {
       setSpremanje(true);
       setGreska("");
+      setPoruka("");
 
-      const res = await fetch(
-        editId ? `/api/radno-vrijeme/${editId}` : "/api/radno-vrijeme",
-        {
-          method: editId ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            firmaId,
-            radnikId: forma.radnikId,
-            datum: forma.datum,
-            pocetak: forma.pocetak,
-            kraj: forma.kraj,
-            status: forma.status,
-            napomena: forma.napomena.trim() || null,
-          }),
-        }
-      );
+      const res = await fetch("/api/radno-vrijeme/mjesec", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firmaId, entries }),
+      });
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || "Ne mogu spremiti radno vrijeme.");
+        throw new Error(text || "Ne mogu spremiti mjesecnu evidenciju.");
       }
 
-      setForma(praznaForma);
-      setEditId(null);
+      const result: { saved?: number; deleted?: number } = await res.json();
+      setDrafts({});
       await ucitajSve();
+      setPoruka(
+        `Spremljeno: ${result.saved || 0}. Obrisano: ${result.deleted || 0}.`
+      );
     } catch (err) {
-      setGreska(err instanceof Error ? err.message : "Greška pri spremanju.");
+      setGreska(err instanceof Error ? err.message : "Greska pri spremanju.");
     } finally {
       setSpremanje(false);
     }
   };
 
-  const pokreniUredenje = (zapis: RadnoVrijeme) => {
-    const radnik =
-      (zapis.radnikId ? radnikPoId.get(zapis.radnikId) : null) ||
-      radnikPoOib.get(zapis.oib);
-
-    setForma({
-      radnikId: radnik?.id || zapis.radnikId || "",
-      datum: toInputDate(zapis.datum),
-      pocetak: zapis.pocetak,
-      kraj: zapis.kraj,
-      status: zapis.status || "evidentirano",
-      napomena: zapis.napomena || "",
-    });
-    setEditId(zapis.id);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const obrisi = async (id: string) => {
-    if (!confirm("Obrisati zapis radnog vremena?")) return;
-
-    try {
-      const res = await fetch(`/api/radno-vrijeme/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Ne mogu obrisati zapis.");
-      }
-      await ucitajSve();
-    } catch (err) {
-      setGreska(err instanceof Error ? err.message : "Greška pri brisanju.");
-    }
-  };
-
-  const csvEscape = (value: string | number | null | undefined) =>
-    `"${String(value ?? "").replace(/"/g, '""')}"`;
-
-  const exportHeaders = [
-    "Radnik",
-    "OIB",
-    "Datum",
-    "Početak",
-    "Kraj",
-    "Ukupno",
-    "Status",
-    "Napomena",
-  ];
-
   const exportRows = () =>
-    filtriraniZapisi.map((zapis) => {
-      const radnik =
-        (zapis.radnikId ? radnikPoId.get(zapis.radnikId) : null) ||
-        radnikPoOib.get(zapis.oib);
+    prikazaniRadnici.map((radnik) => {
+      const dayValues = dani.map((day) => {
+        const value = getCellValue(radnik.id, day);
+        if (!value.pocetak || !value.kraj) return "";
+        return `${value.pocetak}-${value.kraj} (${formatMinutes(
+          calculateMinutes(value.pocetak, value.kraj)
+        )})`;
+      });
 
       return [
-        radnik?.ime || "",
-        zapis.oib,
-        formatDate(zapis.datum),
-        zapis.pocetak,
-        zapis.kraj,
-        formatMinutes(zapis.ukupnoMin),
-        statusLabel(zapis.status),
-        zapis.napomena || "",
+        radnik.ime,
+        radnik.oib,
+        ...dayValues,
+        formatMinutes(rowTotal(radnik.id)),
       ];
     });
 
   const exportCsv = () => {
-    const rows = exportRows();
+    const headers = [
+      "Radnik",
+      "OIB",
+      ...dani.map((day) => `${day.day}.${day.weekday}`),
+      "Ukupno",
+    ];
     const csv = [
-      exportHeaders.map(csvEscape).join(";"),
-      ...rows.map((row) => row.map(csvEscape).join(";")),
+      headers.map(csvEscape).join(";"),
+      ...exportRows().map((row) => row.map(csvEscape).join(";")),
     ].join("\n");
 
     const blob = new Blob(["\uFEFF" + csv], {
@@ -300,38 +480,39 @@ export default function RadnoVrijemePage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `radno-vrijeme-${tvrtka?.naziv || "tvrtka"}.csv`;
+    a.download = `radno-vrijeme-${tvrtka?.naziv || "tvrtka"}-${mjesec}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const exportExcel = async () => {
     const XLSX = await import("xlsx");
-    const rows = exportRows();
-    const worksheet = XLSX.utils.aoa_to_sheet([exportHeaders, ...rows]);
+    const headers = [
+      "Radnik",
+      "OIB",
+      ...dani.map((day) => `${day.day}.${day.weekday}`),
+      "Ukupno",
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportRows()]);
     worksheet["!cols"] = [
       { wch: 28 },
       { wch: 14 },
-      { wch: 14 },
-      { wch: 10 },
-      { wch: 10 },
-      { wch: 10 },
-      { wch: 14 },
-      { wch: 32 },
+      ...dani.map(() => ({ wch: 14 })),
+      { wch: 12 },
     ];
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Radno vrijeme");
     XLSX.writeFile(
       workbook,
-      `radno-vrijeme-${tvrtka?.naziv || "tvrtka"}.xlsx`
+      `radno-vrijeme-${tvrtka?.naziv || "tvrtka"}-${mjesec}.xlsx`
     );
   };
 
   if (ucitavanje) {
     return (
       <div style={pageStyle}>
-        <div style={cardStyle}>Učitavanje...</div>
+        <div style={cardStyle}>Ucitavanje...</div>
       </div>
     );
   }
@@ -339,7 +520,7 @@ export default function RadnoVrijemePage() {
   if (!tvrtka) {
     return (
       <div style={pageStyle}>
-        <div style={cardStyle}>Tvrtka nije pronađena.</div>
+        <div style={cardStyle}>Tvrtka nije pronadena.</div>
       </div>
     );
   }
@@ -348,7 +529,7 @@ export default function RadnoVrijemePage() {
     <div style={pageStyle}>
       <div style={{ marginBottom: 16 }}>
         <Link href={`/tvrtke/${firmaId}`} style={backLinkStyle}>
-          ← Natrag na tvrtku
+          &larr; Natrag na tvrtku
         </Link>
       </div>
 
@@ -361,108 +542,43 @@ export default function RadnoVrijemePage() {
           </p>
         </div>
         <div style={heroStatsStyle}>
-          <MiniStat label="Zapisa" value={filtriraniZapisi.length} />
-          <MiniStat label="Ukupno sati" value={formatMinutes(ukupnoMinuta)} />
-          <MiniStat label="Prekovremeno" value={formatMinutes(ukupnoPrekovremeno)} />
+          <MiniStat label="Aktivnih radnika" value={aktivniRadnici.length} />
+          <MiniStat label="Prikazano" value={prikazaniRadnici.length} />
+          <MiniStat label="Ukupno sati" value={formatMinutes(mjesecTotal)} />
         </div>
       </section>
 
       <section style={cardStyle}>
-        <h2 style={sectionTitleStyle}>
-          {editId ? "Uređenje zapisa" : "Unos radnog vremena"}
-        </h2>
+        <div style={toolbarStyle}>
+          <Field label="Mjesec">
+            <input
+              type="month"
+              style={inputStyle}
+              value={mjesec}
+              onChange={(e) => setMjesec(e.target.value || todayMonth())}
+            />
+          </Field>
 
-        <div style={formGridStyle}>
           <Field label="Radnik">
-            <select
-              style={inputStyle}
-              value={forma.radnikId}
-              onChange={(e) => setForma({ ...forma, radnikId: e.target.value })}
-            >
-              <option value="">Odaberi radnika</option>
-              {aktivniRadnici.map((radnik) => (
-                <option key={radnik.id} value={radnik.id}>
-                  {radnik.ime} ({radnik.oib})
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="Datum">
             <input
-              type="date"
               style={inputStyle}
-              value={forma.datum}
-              onChange={(e) => setForma({ ...forma, datum: e.target.value })}
+              value={filterRadnik}
+              onChange={(e) => setFilterRadnik(e.target.value)}
+              placeholder="Ime ili OIB"
             />
           </Field>
 
-          <Field label="Početak rada">
-            <input
-              type="time"
-              style={inputStyle}
-              value={forma.pocetak}
-              onChange={(e) => setForma({ ...forma, pocetak: e.target.value })}
-            />
-          </Field>
-
-          <Field label="Kraj rada">
-            <input
-              type="time"
-              style={inputStyle}
-              value={forma.kraj}
-              onChange={(e) => setForma({ ...forma, kraj: e.target.value })}
-            />
-          </Field>
-
-          <Field label="Status">
-            <select
-              style={inputStyle}
-              value={forma.status}
-              onChange={(e) => setForma({ ...forma, status: e.target.value })}
-            >
-              <option value="evidentirano">Evidentirano</option>
-              <option value="zakljuceno">Zaključeno</option>
-            </select>
-          </Field>
-
-          <Field label="Napomena">
-            <input
-              style={inputStyle}
-              value={forma.napomena}
-              onChange={(e) => setForma({ ...forma, napomena: e.target.value })}
-              placeholder="Napomena"
-            />
-          </Field>
-        </div>
-
-        <div style={actionRowStyle}>
-          <button style={primaryButtonStyle} onClick={spremi} disabled={spremanje}>
-            {spremanje ? "Spremanje..." : editId ? "Spremi izmjene" : "Dodaj zapis"}
-          </button>
-          {editId ? (
-            <button
-              style={secondaryButtonStyle}
-              onClick={() => {
-                setForma(praznaForma);
-                setEditId(null);
-              }}
-            >
-              Odustani
+          <div style={toolbarActionsStyle}>
+            <button style={secondaryButtonStyle} onClick={popuniRadneDane}>
+              Popuni radne dane 08-16
             </button>
-          ) : null}
-        </div>
-
-        {greska ? <div style={errorStyle}>{greska}</div> : null}
-      </section>
-
-      <section style={cardStyle}>
-        <div style={tableHeaderStyle}>
-          <div>
-            <h2 style={sectionTitleStyle}>Popis radnog vremena</h2>
-            <p style={mutedStyle}>Pregled zapisa po radniku, datumu i statusu.</p>
-          </div>
-          <div style={exportActionsStyle}>
+            <button
+              style={primaryButtonStyle}
+              onClick={spremiIzmjene}
+              disabled={spremanje}
+            >
+              {spremanje ? "Spremanje..." : `Spremi izmjene (${changedCount})`}
+            </button>
             <button style={secondaryButtonStyle} onClick={exportCsv}>
               Izvoz CSV
             </button>
@@ -472,98 +588,138 @@ export default function RadnoVrijemePage() {
           </div>
         </div>
 
-        <div style={filterGridStyle}>
-          <Field label="Radnik">
-            <input
-              style={inputStyle}
-              value={filterRadnik}
-              onChange={(e) => setFilterRadnik(e.target.value)}
-              placeholder="Ime ili OIB"
-            />
-          </Field>
-          <Field label="Mjesec">
-            <input
-              type="month"
-              style={inputStyle}
-              value={filterMjesec}
-              onChange={(e) => setFilterMjesec(e.target.value)}
-            />
-          </Field>
-          <Field label="Status">
-            <select
-              style={inputStyle}
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="">Svi statusi</option>
-              <option value="evidentirano">Evidentirano</option>
-              <option value="zakljuceno">Zaključeno</option>
-            </select>
-          </Field>
+        {greska ? <div style={errorStyle}>{greska}</div> : null}
+        {poruka ? <div style={successStyle}>{poruka}</div> : null}
+
+        <div style={legendStyle}>
+          <span style={legendItemStyle}>
+            <span style={{ ...legendDotStyle, background: "#e0f2fe" }} />{" "}
+            Predlozeno radno vrijeme
+          </span>
+          <span style={legendItemStyle}>
+            <span style={{ ...legendDotStyle, background: "#dcfce7" }} />{" "}
+            Spremljeno
+          </span>
+          <span style={legendItemStyle}>
+            <span style={{ ...legendDotStyle, background: "#fef3c7" }} />{" "}
+            Nedjelja ili blagdan
+          </span>
+        </div>
+      </section>
+
+      <section style={cardStyle}>
+        <div style={tableHeaderStyle}>
+          <div>
+            <h2 style={sectionTitleStyle}>Mjesecni unos po radniku</h2>
+            <p style={mutedStyle}>
+              Za radne dane je ponudeno {DEFAULT_START}-{DEFAULT_END}. Nedjelje
+              i blagdani su oznaceni, ali se mogu rucno upisati ako se radilo.
+            </p>
+          </div>
         </div>
 
         <div style={tableWrapStyle}>
           <table style={tableStyle}>
             <thead>
               <tr>
-                <th style={thStyle}>Radnik</th>
-                <th style={thStyle}>Datum</th>
-                <th style={thStyle}>Vrijeme</th>
-                <th style={thStyle}>Ukupno</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Napomena</th>
-                <th style={thStyle}>Akcije</th>
+                <th style={{ ...thStyle, ...stickyWorkerHeaderStyle }}>Radnik</th>
+                {dani.map((day) => (
+                  <th
+                    key={day.iso}
+                    title={day.holidayName || day.weekday}
+                    style={{
+                      ...thDayStyle,
+                      ...(day.isSunday || day.isHoliday ? holidayHeaderStyle : {}),
+                    }}
+                  >
+                    <div>{day.day}</div>
+                    <small>{day.weekday}</small>
+                  </th>
+                ))}
+                <th style={thTotalStyle}>Ukupno</th>
               </tr>
             </thead>
             <tbody>
-              {filtriraniZapisi.length === 0 ? (
+              {prikazaniRadnici.length === 0 ? (
                 <tr>
-                  <td style={tdCenterStyle} colSpan={7}>
-                    Nema zapisa.
+                  <td style={tdCenterStyle} colSpan={dani.length + 2}>
+                    Nema aktivnih radnika za prikaz.
                   </td>
                 </tr>
               ) : (
-                filtriraniZapisi.map((zapis) => {
-                  const radnik =
-                    (zapis.radnikId ? radnikPoId.get(zapis.radnikId) : null) ||
-                    radnikPoOib.get(zapis.oib);
+                prikazaniRadnici.map((radnik) => (
+                  <tr key={radnik.id}>
+                    <td style={{ ...tdStyle, ...stickyWorkerCellStyle }}>
+                      <strong>{radnik.ime}</strong>
+                      <div style={subTextStyle}>{radnik.oib}</div>
+                    </td>
+                    {dani.map((day) => {
+                      const value = getCellValue(radnik.id, day);
+                      const key = cellKey(radnik.id, day.iso);
+                      const minutes =
+                        value.pocetak && value.kraj
+                          ? calculateMinutes(value.pocetak, value.kraj)
+                          : 0;
 
-                  return (
-                    <tr key={zapis.id}>
-                      <td style={tdStyle}>
-                        <strong>{radnik?.ime || zapis.oib}</strong>
-                        <div style={subTextStyle}>{zapis.oib}</div>
-                      </td>
-                      <td style={tdStyle}>{formatDate(zapis.datum)}</td>
-                      <td style={tdStyle}>
-                        {zapis.pocetak} - {zapis.kraj}
-                      </td>
-                      <td style={tdStyle}>
-                        <strong>{formatMinutes(zapis.ukupnoMin)}</strong>
-                      </td>
-                      <td style={tdStyle}>
-                        <span style={pillStyle}>{statusLabel(zapis.status)}</span>
-                      </td>
-                      <td style={tdStyle}>{zapis.napomena || "-"}</td>
-                      <td style={tdStyle}>
-                        <div style={tableActionsStyle}>
-                          <button
-                            style={smallButtonStyle}
-                            onClick={() => pokreniUredenje(zapis)}
-                          >
-                            Uredi
-                          </button>
-                          <button
-                            style={smallDangerButtonStyle}
-                            onClick={() => obrisi(zapis.id)}
-                          >
-                            Obriši
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                      return (
+                        <td
+                          key={key}
+                          style={{
+                            ...tdDayStyle,
+                            ...(day.isSunday || day.isHoliday
+                              ? holidayCellStyle
+                              : {}),
+                            ...(value.source === "saved" ? savedCellStyle : {}),
+                            ...(value.source === "suggested"
+                              ? suggestedCellStyle
+                              : {}),
+                            ...(value.source === "draft" ? draftCellStyle : {}),
+                          }}
+                        >
+                          <div style={cellInputsStyle}>
+                            <input
+                              type="time"
+                              value={value.pocetak}
+                              onChange={(e) =>
+                                updateCell(
+                                  radnik.id,
+                                  day,
+                                  "pocetak",
+                                  e.target.value
+                                )
+                              }
+                              style={timeInputStyle}
+                              aria-label={`Pocetak ${radnik.ime} ${day.iso}`}
+                            />
+                            <input
+                              type="time"
+                              value={value.kraj}
+                              onChange={(e) =>
+                                updateCell(radnik.id, day, "kraj", e.target.value)
+                              }
+                              style={timeInputStyle}
+                              aria-label={`Kraj ${radnik.ime} ${day.iso}`}
+                            />
+                          </div>
+                          <div style={cellFooterStyle}>
+                            <span>{minutes ? formatMinutes(minutes) : "-"}</span>
+                            <button
+                              type="button"
+                              style={clearButtonStyle}
+                              onClick={() => clearCell(radnik.id, day)}
+                              title="Ocisti dan"
+                            >
+                              x
+                            </button>
+                          </div>
+                        </td>
+                      );
+                    })}
+                    <td style={tdTotalStyle}>
+                      <strong>{formatMinutes(rowTotal(radnik.id))}</strong>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -660,28 +816,18 @@ const cardStyle: React.CSSProperties = {
   padding: 18,
 };
 
-const sectionTitleStyle: React.CSSProperties = {
-  margin: "0 0 14px",
-  fontSize: 20,
-  color: "#0f172a",
-};
-
-const mutedStyle: React.CSSProperties = {
-  margin: 0,
-  color: "#64748b",
-};
-
-const formGridStyle: React.CSSProperties = {
+const toolbarStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+  gridTemplateColumns: "minmax(170px, 220px) minmax(220px, 320px) 1fr",
   gap: 14,
+  alignItems: "end",
 };
 
-const filterGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-  gap: 14,
-  marginBottom: 18,
+const toolbarActionsStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 10,
+  flexWrap: "wrap",
+  justifyContent: "flex-end",
 };
 
 const fieldStyle: React.CSSProperties = {
@@ -704,13 +850,6 @@ const inputStyle: React.CSSProperties = {
   boxSizing: "border-box",
   fontSize: 14,
   background: "white",
-};
-
-const actionRowStyle: React.CSSProperties = {
-  display: "flex",
-  gap: 10,
-  flexWrap: "wrap",
-  marginTop: 16,
 };
 
 const primaryButtonStyle: React.CSSProperties = {
@@ -742,6 +881,39 @@ const errorStyle: React.CSSProperties = {
   border: "1px solid #fecaca",
 };
 
+const successStyle: React.CSSProperties = {
+  marginTop: 14,
+  padding: 12,
+  borderRadius: 8,
+  background: "#dcfce7",
+  color: "#166534",
+  border: "1px solid #bbf7d0",
+  fontWeight: 800,
+};
+
+const legendStyle: React.CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 14,
+  marginTop: 14,
+  color: "#475569",
+  fontSize: 13,
+  fontWeight: 800,
+};
+
+const legendItemStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+};
+
+const legendDotStyle: React.CSSProperties = {
+  width: 12,
+  height: 12,
+  borderRadius: 999,
+  border: "1px solid #cbd5e1",
+};
+
 const tableHeaderStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
@@ -751,34 +923,101 @@ const tableHeaderStyle: React.CSSProperties = {
   marginBottom: 16,
 };
 
-const exportActionsStyle: React.CSSProperties = {
-  display: "flex",
-  gap: 10,
-  flexWrap: "wrap",
+const sectionTitleStyle: React.CSSProperties = {
+  margin: "0 0 8px",
+  fontSize: 20,
+  color: "#0f172a",
+};
+
+const mutedStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#64748b",
 };
 
 const tableWrapStyle: React.CSSProperties = {
-  overflowX: "auto",
+  overflow: "auto",
+  maxHeight: "70vh",
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
 };
 
 const tableStyle: React.CSSProperties = {
   width: "100%",
-  minWidth: 980,
-  borderCollapse: "collapse",
+  minWidth: 2200,
+  borderCollapse: "separate",
+  borderSpacing: 0,
 };
 
 const thStyle: React.CSSProperties = {
   textAlign: "left",
-  padding: 12,
+  padding: 10,
   borderBottom: "1px solid #e2e8f0",
   color: "#334155",
   fontSize: 13,
+  background: "#f8fafc",
+  position: "sticky",
+  top: 0,
+  zIndex: 2,
+};
+
+const thDayStyle: React.CSSProperties = {
+  ...thStyle,
+  width: 104,
+  minWidth: 104,
+  textAlign: "center",
+};
+
+const thTotalStyle: React.CSSProperties = {
+  ...thStyle,
+  width: 100,
+  minWidth: 100,
+  textAlign: "center",
+  right: 0,
+  zIndex: 3,
+};
+
+const stickyWorkerHeaderStyle: React.CSSProperties = {
+  left: 0,
+  zIndex: 4,
+  minWidth: 230,
+};
+
+const stickyWorkerCellStyle: React.CSSProperties = {
+  position: "sticky",
+  left: 0,
+  zIndex: 1,
+  background: "#ffffff",
+  minWidth: 230,
+};
+
+const holidayHeaderStyle: React.CSSProperties = {
+  background: "#fef3c7",
+  color: "#92400e",
 };
 
 const tdStyle: React.CSSProperties = {
-  padding: 12,
+  padding: 10,
   borderBottom: "1px solid #eef2f7",
+  borderRight: "1px solid #eef2f7",
   verticalAlign: "top",
+  background: "#ffffff",
+};
+
+const tdDayStyle: React.CSSProperties = {
+  ...tdStyle,
+  width: 104,
+  minWidth: 104,
+  padding: 6,
+};
+
+const tdTotalStyle: React.CSSProperties = {
+  ...tdStyle,
+  position: "sticky",
+  right: 0,
+  zIndex: 1,
+  minWidth: 100,
+  textAlign: "center",
+  background: "#f8fafc",
 };
 
 const tdCenterStyle: React.CSSProperties = {
@@ -787,46 +1026,63 @@ const tdCenterStyle: React.CSSProperties = {
   color: "#64748b",
 };
 
+const holidayCellStyle: React.CSSProperties = {
+  background: "#fffbeb",
+};
+
+const savedCellStyle: React.CSSProperties = {
+  background: "#dcfce7",
+};
+
+const suggestedCellStyle: React.CSSProperties = {
+  background: "#e0f2fe",
+};
+
+const draftCellStyle: React.CSSProperties = {
+  background: "#fef9c3",
+};
+
 const subTextStyle: React.CSSProperties = {
   marginTop: 3,
   color: "#64748b",
   fontSize: 12,
 };
 
-const pillStyle: React.CSSProperties = {
-  display: "inline-flex",
+const cellInputsStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 4,
+};
+
+const timeInputStyle: React.CSSProperties = {
+  width: "100%",
+  minHeight: 30,
+  border: "1px solid #cbd5e1",
+  borderRadius: 6,
+  padding: "3px 4px",
+  fontSize: 12,
+  boxSizing: "border-box",
+  background: "rgba(255,255,255,0.78)",
+};
+
+const cellFooterStyle: React.CSSProperties = {
+  display: "flex",
   alignItems: "center",
-  justifyContent: "center",
-  padding: "5px 9px",
-  borderRadius: 999,
-  background: "#dcfce7",
-  color: "#166534",
+  justifyContent: "space-between",
+  gap: 4,
+  marginTop: 4,
+  color: "#334155",
   fontSize: 12,
   fontWeight: 900,
 };
 
-const tableActionsStyle: React.CSSProperties = {
-  display: "flex",
-  gap: 8,
-  flexWrap: "wrap",
-};
-
-const smallButtonStyle: React.CSSProperties = {
-  padding: "7px 9px",
-  borderRadius: 8,
+const clearButtonStyle: React.CSSProperties = {
+  width: 20,
+  height: 20,
   border: "none",
-  background: "#64748b",
-  color: "white",
-  fontWeight: 800,
+  borderRadius: 999,
+  background: "#e2e8f0",
+  color: "#334155",
   cursor: "pointer",
-};
-
-const smallDangerButtonStyle: React.CSSProperties = {
-  padding: "7px 9px",
-  borderRadius: 8,
-  border: "none",
-  background: "#dc2626",
-  color: "white",
-  fontWeight: 800,
-  cursor: "pointer",
+  fontSize: 12,
+  lineHeight: 1,
 };
