@@ -16,6 +16,7 @@ model Tvrtka {
   radnici          Radnik[]
   lijecnicki       LijecnickiPregled[]
   osposobljavanja  StrucnoOsposobljavanje[]
+  radnoVrijeme      RadnoVrijeme[]
   createdAt        DateTime                  @default(now())
   updatedAt        DateTime                  @updatedAt
 }
@@ -157,6 +158,31 @@ model Planer {
   updatedAt   DateTime @updatedAt
 
   @@index([firmaId])
+  @@index([datum])
+  @@index([status])
+}
+
+model RadnoVrijeme {
+  id          String   @id @default(cuid())
+  firmaId     String
+  radnikId    String?
+  oib         String
+  datum       DateTime
+  pocetak     String
+  kraj        String
+  pauzaMin    Int      @default(0)
+  ukupnoMin   Int      @default(0)
+  status      String   @default("evidentirano")
+  napomena    String?
+
+  tvrtka      Tvrtka   @relation(fields: [firmaId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([firmaId])
+  @@index([firmaId, oib])
+  @@index([firmaId, radnikId])
   @@index([datum])
   @@index([status])
 }

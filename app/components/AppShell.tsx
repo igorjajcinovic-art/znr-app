@@ -71,6 +71,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       return "Radna oprema, strojevi i ispitivanja";
     }
     if (pathname.includes("/planer")) return "Planer";
+    if (pathname.includes("/radno-vrijeme")) return "Radno vrijeme";
     if (pathname.includes("/ugovori")) return "Ugovori";
     if (pathname.includes("/upozorenja")) return "Upozorenja";
     if (pathname.startsWith("/tvrtke/")) return "Detalji tvrtke";
@@ -127,6 +128,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
       label: "Planer",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/planer` : "/tvrtke",
       icon: "▢",
+    },
+    {
+      label: "Radno vrijeme",
+      href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/radno-vrijeme` : "/tvrtke",
+      icon: "h",
     },
     {
       label: "Ugovori",

@@ -99,6 +99,16 @@ type PlanerItem = {
   opremaId: string | null;
 };
 
+type RadnoVrijeme = {
+  id: string;
+  firmaId: string;
+  radnikId: string | null;
+  oib: string;
+  datum: string;
+  ukupnoMin: number;
+  status: string;
+};
+
 export default function TvrtkaDetaljiPage() {
   const params = useParams();
   const firmaIdRaw = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -116,6 +126,7 @@ export default function TvrtkaDetaljiPage() {
     VatrogasniAparat[]
   >([]);
   const [planer, setPlaner] = useState<PlanerItem[]>([]);
+  const [radnoVrijeme, setRadnoVrijeme] = useState<RadnoVrijeme[]>([]);
   const [ucitavanje, setUcitavanje] = useState(true);
   const [greska, setGreska] = useState("");
 
@@ -138,6 +149,7 @@ export default function TvrtkaDetaljiPage() {
         radnaOpremaRes,
         vatrogasniRes,
         planerRes,
+        radnoVrijemeRes,
       ] = await Promise.all([
         fetch("/api/tvrtke", { cache: "no-store" }),
         fetch(`/api/radnici?firmaId=${encodeURIComponent(firmaId)}`, {
@@ -159,6 +171,9 @@ export default function TvrtkaDetaljiPage() {
           cache: "no-store",
         }),
         fetch(`/api/planer?firmaId=${encodeURIComponent(firmaId)}`, {
+          cache: "no-store",
+        }).catch(() => null),
+        fetch(`/api/radno-vrijeme?firmaId=${encodeURIComponent(firmaId)}`, {
           cache: "no-store",
         }).catch(() => null),
       ]);
@@ -196,6 +211,15 @@ export default function TvrtkaDetaljiPage() {
         }
       }
 
+      let radnoVrijemeData: RadnoVrijeme[] = [];
+      if (radnoVrijemeRes && radnoVrijemeRes.ok) {
+        try {
+          radnoVrijemeData = await radnoVrijemeRes.json();
+        } catch {
+          radnoVrijemeData = [];
+        }
+      }
+
       const nadenaTvrtka = sveTvrtke.find((t) => t.id === firmaId) || null;
 
       if (!nadenaTvrtka) {
@@ -210,6 +234,7 @@ export default function TvrtkaDetaljiPage() {
       setRadnaOprema(radnaOpremaData);
       setVatrogasniAparati(vatrogasniData);
       setPlaner(planerData);
+      setRadnoVrijeme(radnoVrijemeData);
     } catch (err) {
       setGreska(
         err instanceof Error ? err.message : "Greška pri učitavanju."
@@ -384,6 +409,13 @@ export default function TvrtkaDetaljiPage() {
       href: `/tvrtke/${firmaId}/planer`,
       broj: planer.length,
       oznaka: "stavki",
+    },
+    {
+      naziv: "Radno vrijeme",
+      opis: "Evidencija dnevnih sati rada, pauza, statusa i napomena po radniku.",
+      href: `/tvrtke/${firmaId}/radno-vrijeme`,
+      broj: radnoVrijeme.length,
+      oznaka: "zapisa",
     },
     {
       naziv: "Ugovori",
