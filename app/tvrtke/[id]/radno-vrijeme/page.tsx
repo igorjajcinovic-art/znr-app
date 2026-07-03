@@ -262,19 +262,20 @@ export default function RadnoVrijemePage() {
   const csvEscape = (value: string | number | null | undefined) =>
     `"${String(value ?? "").replace(/"/g, '""')}"`;
 
-  const exportCsv = () => {
-    const headers = [
-      "Radnik",
-      "OIB",
-      "Datum",
-      "Početak",
-      "Kraj",
-      "Pauza (min)",
-      "Ukupno",
-      "Status",
-      "Napomena",
-    ];
-    const rows = filtriraniZapisi.map((zapis) => {
+  const exportHeaders = [
+    "Radnik",
+    "OIB",
+    "Datum",
+    "Početak",
+    "Kraj",
+    "Pauza (min)",
+    "Ukupno",
+    "Status",
+    "Napomena",
+  ];
+
+  const exportRows = () =>
+    filtriraniZapisi.map((zapis) => {
       const radnik =
         (zapis.radnikId ? radnikPoId.get(zapis.radnikId) : null) ||
         radnikPoOib.get(zapis.oib);
@@ -292,8 +293,10 @@ export default function RadnoVrijemePage() {
       ];
     });
 
+  const exportCsv = () => {
+    const rows = exportRows();
     const csv = [
-      headers.map(csvEscape).join(";"),
+      exportHeaders.map(csvEscape).join(";"),
       ...rows.map((row) => row.map(csvEscape).join(";")),
     ].join("\n");
 
@@ -306,6 +309,30 @@ export default function RadnoVrijemePage() {
     a.download = `radno-vrijeme-${tvrtka?.naziv || "tvrtka"}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const exportExcel = async () => {
+    const XLSX = await import("xlsx");
+    const rows = exportRows();
+    const worksheet = XLSX.utils.aoa_to_sheet([exportHeaders, ...rows]);
+    worksheet["!cols"] = [
+      { wch: 28 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 10 },
+      { wch: 14 },
+      { wch: 32 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Radno vrijeme");
+    XLSX.writeFile(
+      workbook,
+      `radno-vrijeme-${tvrtka?.naziv || "tvrtka"}.xlsx`
+    );
   };
 
   if (ucitavanje) {
@@ -453,9 +480,14 @@ export default function RadnoVrijemePage() {
             <h2 style={sectionTitleStyle}>Popis radnog vremena</h2>
             <p style={mutedStyle}>Pregled zapisa po radniku, datumu i statusu.</p>
           </div>
-          <button style={secondaryButtonStyle} onClick={exportCsv}>
-            Izvoz CSV
-          </button>
+          <div style={exportActionsStyle}>
+            <button style={secondaryButtonStyle} onClick={exportCsv}>
+              Izvoz CSV
+            </button>
+            <button style={primaryButtonStyle} onClick={exportExcel}>
+              Izvoz Excel
+            </button>
+          </div>
         </div>
 
         <div style={filterGridStyle}>
@@ -737,6 +769,12 @@ const tableHeaderStyle: React.CSSProperties = {
   gap: 12,
   flexWrap: "wrap",
   marginBottom: 16,
+};
+
+const exportActionsStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 10,
+  flexWrap: "wrap",
 };
 
 const tableWrapStyle: React.CSSProperties = {
