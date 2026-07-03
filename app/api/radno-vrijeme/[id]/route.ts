@@ -13,11 +13,6 @@ function normalizeStatus(value: unknown) {
     : "evidentirano";
 }
 
-function normalizePause(value: unknown) {
-  const pauza = Number(value ?? 0);
-  return Number.isFinite(pauza) && pauza > 0 ? Math.round(pauza) : 0;
-}
-
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -33,7 +28,7 @@ export async function PUT(
     const datum = parseHrDate(body?.datum);
     const pocetak = String(body?.pocetak ?? "").trim();
     const kraj = String(body?.kraj ?? "").trim();
-    const pauzaMin = normalizePause(body?.pauzaMin);
+    const pauzaMin = 0;
     const status = normalizeStatus(body?.status);
 
     if (!firmaId || !radnikId || !datum || !pocetak || !kraj) {
@@ -44,7 +39,7 @@ export async function PUT(
       return new Response("Vrijeme mora biti u obliku HH:mm.", { status: 400 });
     }
 
-    const ukupnoMin = calculateWorkMinutes(pocetak, kraj, pauzaMin);
+    const ukupnoMin = calculateWorkMinutes(pocetak, kraj, 0);
 
     if (ukupnoMin === null) {
       return new Response("Vrijeme rada nije ispravno.", { status: 400 });

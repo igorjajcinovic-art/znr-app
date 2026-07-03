@@ -38,7 +38,6 @@ type Forma = {
   datum: string;
   pocetak: string;
   kraj: string;
-  pauzaMin: string;
   status: string;
   napomena: string;
 };
@@ -48,7 +47,6 @@ const praznaForma: Forma = {
   datum: "",
   pocetak: "08:00",
   kraj: "16:00",
-  pauzaMin: "30",
   status: "evidentirano",
   napomena: "",
 };
@@ -204,7 +202,6 @@ export default function RadnoVrijemePage() {
             datum: forma.datum,
             pocetak: forma.pocetak,
             kraj: forma.kraj,
-            pauzaMin: Number(forma.pauzaMin || 0),
             status: forma.status,
             napomena: forma.napomena.trim() || null,
           }),
@@ -236,7 +233,6 @@ export default function RadnoVrijemePage() {
       datum: toInputDate(zapis.datum),
       pocetak: zapis.pocetak,
       kraj: zapis.kraj,
-      pauzaMin: String(zapis.pauzaMin || 0),
       status: zapis.status || "evidentirano",
       napomena: zapis.napomena || "",
     });
@@ -268,7 +264,6 @@ export default function RadnoVrijemePage() {
     "Datum",
     "Početak",
     "Kraj",
-    "Pauza (min)",
     "Ukupno",
     "Status",
     "Napomena",
@@ -286,7 +281,6 @@ export default function RadnoVrijemePage() {
         formatDate(zapis.datum),
         zapis.pocetak,
         zapis.kraj,
-        zapis.pauzaMin,
         formatMinutes(zapis.ukupnoMin),
         statusLabel(zapis.status),
         zapis.napomena || "",
@@ -321,7 +315,6 @@ export default function RadnoVrijemePage() {
       { wch: 14 },
       { wch: 10 },
       { wch: 10 },
-      { wch: 12 },
       { wch: 10 },
       { wch: 14 },
       { wch: 32 },
@@ -422,17 +415,6 @@ export default function RadnoVrijemePage() {
             />
           </Field>
 
-          <Field label="Pauza (min)">
-            <input
-              type="number"
-              min="0"
-              step="5"
-              style={inputStyle}
-              value={forma.pauzaMin}
-              onChange={(e) => setForma({ ...forma, pauzaMin: e.target.value })}
-            />
-          </Field>
-
           <Field label="Status">
             <select
               style={inputStyle}
@@ -527,7 +509,6 @@ export default function RadnoVrijemePage() {
                 <th style={thStyle}>Radnik</th>
                 <th style={thStyle}>Datum</th>
                 <th style={thStyle}>Vrijeme</th>
-                <th style={thStyle}>Pauza</th>
                 <th style={thStyle}>Ukupno</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Napomena</th>
@@ -537,7 +518,7 @@ export default function RadnoVrijemePage() {
             <tbody>
               {filtriraniZapisi.length === 0 ? (
                 <tr>
-                  <td style={tdCenterStyle} colSpan={8}>
+                  <td style={tdCenterStyle} colSpan={7}>
                     Nema zapisa.
                   </td>
                 </tr>
@@ -557,7 +538,6 @@ export default function RadnoVrijemePage() {
                       <td style={tdStyle}>
                         {zapis.pocetak} - {zapis.kraj}
                       </td>
-                      <td style={tdStyle}>{zapis.pauzaMin} min</td>
                       <td style={tdStyle}>
                         <strong>{formatMinutes(zapis.ukupnoMin)}</strong>
                       </td>
