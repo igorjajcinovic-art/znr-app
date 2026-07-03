@@ -39,7 +39,7 @@ export async function PUT(
       return new Response("Vrijeme mora biti u obliku HH:mm.", { status: 400 });
     }
 
-    const ukupnoMin = calculateWorkMinutes(pocetak, kraj, 0);
+    const ukupnoMin = calculateWorkMinutes(pocetak, kraj);
 
     if (ukupnoMin === null) {
       return new Response("Vrijeme rada nije ispravno.", { status: 400 });

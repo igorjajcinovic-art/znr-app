@@ -412,7 +412,7 @@ export default function TvrtkaDetaljiPage() {
     },
     {
       naziv: "Radno vrijeme",
-      opis: "Evidencija dnevnih sati rada, pauza, statusa i napomena po radniku.",
+      opis: "Evidencija dnevnih sati rada, statusa i napomena po radniku.",
       href: `/tvrtke/${firmaId}/radno-vrijeme`,
       broj: radnoVrijeme.length,
       oznaka: "zapisa",

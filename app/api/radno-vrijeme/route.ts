@@ -51,7 +51,14 @@ export async function GET(req: Request) {
       orderBy: [{ datum: "desc" }, { pocetak: "asc" }, { createdAt: "desc" }],
     });
 
-    return Response.json(data);
+    return Response.json(
+      data.map((zapis) => ({
+        ...zapis,
+        pauzaMin: 0,
+        ukupnoMin:
+          calculateWorkMinutes(zapis.pocetak, zapis.kraj) ?? zapis.ukupnoMin,
+      }))
+    );
   } catch (error) {
     console.error(error);
     return new Response("Ne mogu učitati evidenciju radnog vremena.", {
@@ -82,7 +89,7 @@ export async function POST(req: Request) {
       return new Response("Vrijeme mora biti u obliku HH:mm.", { status: 400 });
     }
 
-    const ukupnoMin = calculateWorkMinutes(pocetak, kraj, 0);
+    const ukupnoMin = calculateWorkMinutes(pocetak, kraj);
 
     if (ukupnoMin === null) {
       return new Response("Vrijeme rada nije ispravno.", { status: 400 });

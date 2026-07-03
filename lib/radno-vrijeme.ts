@@ -63,16 +63,12 @@ export function parseTimeToMinutes(value: unknown) {
   return Number(match[1]) * 60 + Number(match[2]);
 }
 
-export function calculateWorkMinutes(
-  pocetak: string,
-  kraj: string,
-  pauzaMin: number
-) {
+export function calculateWorkMinutes(pocetak: string, kraj: string) {
   const start = parseTimeToMinutes(pocetak);
   const end = parseTimeToMinutes(kraj);
 
   if (start === null || end === null) return null;
 
   const raw = end >= start ? end - start : end + 24 * 60 - start;
-  return Math.max(0, raw - Math.max(0, pauzaMin));
+  return Math.max(0, raw);
 }
