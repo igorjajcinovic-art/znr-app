@@ -50,8 +50,8 @@ type CellDraft = {
   napomena: string;
 };
 
-const DEFAULT_START = "08:00";
-const DEFAULT_END = "16:00";
+const DEFAULT_START = "06:00";
+const DEFAULT_END = "14:00";
 const WEEKDAYS = ["ned", "pon", "uto", "sri", "cet", "pet", "sub"];
 
 function todayMonth() {
@@ -343,7 +343,7 @@ export default function RadnoVrijemePage() {
   const updateCell = (
     radnikId: string,
     day: DayInfo,
-    field: "pocetak" | "kraj" | "napomena",
+    field: "pocetak" | "kraj" | "napomena" | "status",
     value: string
   ) => {
     const key = cellKey(radnikId, day.iso);
@@ -356,7 +356,7 @@ export default function RadnoVrijemePage() {
         datum: day.iso,
         pocetak: field === "pocetak" ? value : current.pocetak,
         kraj: field === "kraj" ? value : current.kraj,
-        status: current.status,
+        status: field === "status" ? value : current.status,
         napomena: field === "napomena" ? value : current.napomena,
       },
     }));
@@ -841,14 +841,31 @@ export default function RadnoVrijemePage() {
                           </div>
                           <div style={cellFooterStyle}>
                             <span>{minutes ? formatMinutes(minutes) : "-"}</span>
-                            <button
-                              type="button"
-                              style={clearButtonStyle}
-                              onClick={() => clearCell(radnik.id, day)}
-                              title="Ocisti dan"
-                            >
-                              x
-                            </button>
+                            <div style={cellButtonsStyle}>
+                              <label style={confirmLabelStyle} title="Potvrdi radno vrijeme">
+                                <input
+                                  type="checkbox"
+                                  checked={value.status === "zakljuceno"}
+                                  onChange={(e) =>
+                                    updateCell(
+                                      radnik.id,
+                                      day,
+                                      "status",
+                                      e.target.checked ? "zakljuceno" : "evidentirano"
+                                    )
+                                  }
+                                />
+                                <span>✓</span>
+                              </label>
+                              <button
+                                type="button"
+                                style={clearButtonStyle}
+                                onClick={() => clearCell(radnik.id, day)}
+                                title="Ocisti dan"
+                              >
+                                x
+                              </button>
+                            </div>
                           </div>
                         </td>
                       );
@@ -1211,6 +1228,27 @@ const cellFooterStyle: React.CSSProperties = {
   color: "#334155",
   fontSize: 12,
   fontWeight: 900,
+};
+
+const cellButtonsStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+};
+
+const confirmLabelStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 2,
+  minWidth: 38,
+  height: 20,
+  padding: "0 4px",
+  borderRadius: 999,
+  background: "#dcfce7",
+  color: "#166534",
+  cursor: "pointer",
+  fontSize: 12,
+  lineHeight: 1,
 };
 
 const clearButtonStyle: React.CSSProperties = {
