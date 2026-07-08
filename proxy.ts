@@ -91,6 +91,8 @@ function poslovodaCanAccess(req: NextRequest) {
     if (pathname === "/api/upozorenja/count") return method === "GET";
     if (pathname.startsWith("/api/tvrtke")) return method === "GET";
     if (pathname.startsWith("/api/radnici")) return method === "GET";
+    if (pathname.startsWith("/api/lijecnicki")) return method === "GET";
+    if (pathname.startsWith("/api/osposobljavanja")) return method === "GET";
     if (pathname.startsWith("/api/oprema")) return method !== "DELETE";
     if (pathname.startsWith("/api/radno-vrijeme")) return true;
     return false;

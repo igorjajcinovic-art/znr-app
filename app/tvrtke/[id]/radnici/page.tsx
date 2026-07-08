@@ -52,6 +52,12 @@ type Osposobljavanje = {
   napomena: string | null;
 };
 
+type AuthMe = {
+  user?: {
+    role?: string | null;
+  } | null;
+};
+
 type FormaRadnik = {
   ime: string;
   oib: string;
@@ -137,9 +143,11 @@ export default function RadniciTvrtkePage() {
   const [spremanje, setSpremanje] = useState(false);
   const [importanje, setImportanje] = useState(false);
   const [greska, setGreska] = useState("");
+  const [korisnickaRole, setKorisnickaRole] = useState("");
 
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const isAdmin = korisnickaRole === "admin";
 
   useEffect(() => {
     if (!firmaId) return;
@@ -153,8 +161,9 @@ export default function RadniciTvrtkePage() {
       setGreska("");
       setUcitavanje(true);
 
-      const [tvrtkeRes, radniciRes, preglediRes, osposobljavanjaRes] =
+      const [meRes, tvrtkeRes, radniciRes, preglediRes, osposobljavanjaRes] =
         await Promise.all([
+          fetch("/api/auth/me", { cache: "no-store" }),
           fetch("/api/tvrtke", { cache: "no-store" }),
           fetch(`/api/radnici?firmaId=${encodeURIComponent(firmaId)}`, {
             cache: "no-store",
@@ -166,6 +175,11 @@ export default function RadniciTvrtkePage() {
             cache: "no-store",
           }),
         ]);
+
+      if (meRes.ok) {
+        const meData: AuthMe = await meRes.json();
+        setKorisnickaRole(meData.user?.role || "");
+      }
 
       if (!tvrtkeRes.ok) throw new Error("Ne mogu učitati tvrtku.");
       if (!radniciRes.ok) throw new Error("Ne mogu učitati radnike.");
@@ -503,6 +517,11 @@ export default function RadniciTvrtkePage() {
 };
 
 const importCsv = async () => {
+  if (!isAdmin) {
+    setGreska("Nemate ovlast za uvoz radnika.");
+    return;
+  }
+
   if (!firmaId) {
     alert("Nedostaje ID tvrtke.");
     return;
@@ -823,6 +842,11 @@ const importCsv = async () => {
   ]);
 
   const spremiRadnika = async () => {
+    if (!isAdmin) {
+      setGreska("Nemate ovlast za spremanje radnika.");
+      return;
+    }
+
     if (!firmaId) {
       alert("Nedostaje ID tvrtke.");
       return;
@@ -931,6 +955,11 @@ const importCsv = async () => {
   };
 
   const pokreniUredenje = (radnik: Radnik) => {
+    if (!isAdmin) {
+      setGreska("Nemate ovlast za uređivanje radnika.");
+      return;
+    }
+
     setForma({
       ime: radnik.ime,
       oib: radnik.oib,
@@ -968,6 +997,11 @@ const importCsv = async () => {
   };
 
   const obrisiRadnika = async (id: string) => {
+    if (!isAdmin) {
+      setGreska("Nemate ovlast za brisanje radnika.");
+      return;
+    }
+
     if (!confirm("Obrisati radnika?")) return;
 
     try {
@@ -1097,6 +1131,15 @@ const importCsv = async () => {
           </div>
         </div>
 
+        {!isAdmin && (
+          <div style={infoBoxStyle}>
+            Prijavljeni ste kao poslovođa. Na ovoj stranici možete pregledavati
+            radnike, filtere, detalje i upozorenja, dok su unos, uvoz,
+            uređivanje i brisanje dostupni administratoru.
+          </div>
+        )}
+
+        {isAdmin && (
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>Uvoz radnika iz CSV-a</h2>
 
@@ -1139,6 +1182,7 @@ const importCsv = async () => {
             </div>
           )}
         </div>
+        )}
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>Upozorenja</h2>
@@ -1292,6 +1336,7 @@ const importCsv = async () => {
           </div>
         </div>
 
+        {isAdmin && (
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
             {editId ? "Uređenje radnika" : "Unos radnika"}
@@ -1534,6 +1579,7 @@ const importCsv = async () => {
 
           {greska && <div style={errorBoxStyle}>{greska}</div>}
         </div>
+        )}
 
       <div style={cardStyle}>
   <div style={tableHeaderStyle}>
@@ -1546,6 +1592,7 @@ const importCsv = async () => {
       </div>
     </div>
 
+    {isAdmin && (
     <div style={printActionsStyle}>
       <button style={grayButtonStyle} onClick={exportRadniciCsv}>
         Izvoz CSV
@@ -1575,8 +1622,10 @@ const importCsv = async () => {
         Ispis neaktivni
       </a>
     </div>
+    )}
   </div>
 
+  {isAdmin && (
   <button
     style={smallRedButtonStyle}
     onClick={async () => {
@@ -1591,6 +1640,7 @@ const importCsv = async () => {
   >
     Obriši sve radnike
   </button>
+  )}
 
   <div className="desktop-only">
     <div style={tableWrapStyle}>
@@ -1668,26 +1718,30 @@ const importCsv = async () => {
                       Detalji
                     </button>
 
-                    <button
-                      style={smallGrayButtonStyle}
-                      onClick={() => pokreniUredenje(r)}
-                    >
-                      Uredi
-                    </button>
+                    {isAdmin && (
+                      <>
+                        <button
+                          style={smallGrayButtonStyle}
+                          onClick={() => pokreniUredenje(r)}
+                        >
+                          Uredi
+                        </button>
 
-                    <Link
-                      href={`/tvrtke/${firmaId}/radnici/${r.id}#dokumenti-radnika`}
-                      style={smallLinkButtonStyle}
-                    >
-                      Dokumenti
-                    </Link>
+                        <Link
+                          href={`/tvrtke/${firmaId}/radnici/${r.id}#dokumenti-radnika`}
+                          style={smallLinkButtonStyle}
+                        >
+                          Dokumenti
+                        </Link>
 
-                    <button
-                      style={smallRedButtonStyle}
-                      onClick={() => obrisiRadnika(r.id)}
-                    >
-                      Obriši
-                    </button>
+                        <button
+                          style={smallRedButtonStyle}
+                          onClick={() => obrisiRadnika(r.id)}
+                        >
+                          Obriši
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -1760,20 +1814,30 @@ const importCsv = async () => {
                 Detalji
               </button>
 
-              <button style={smallGrayButtonStyle} onClick={() => pokreniUredenje(r)}>
-                Uredi
-              </button>
+              {isAdmin && (
+                <>
+                  <button
+                    style={smallGrayButtonStyle}
+                    onClick={() => pokreniUredenje(r)}
+                  >
+                    Uredi
+                  </button>
 
-              <Link
-                href={`/tvrtke/${firmaId}/radnici/${r.id}#dokumenti-radnika`}
-                style={smallLinkButtonStyle}
-              >
-                Dokumenti
-              </Link>
+                  <Link
+                    href={`/tvrtke/${firmaId}/radnici/${r.id}#dokumenti-radnika`}
+                    style={smallLinkButtonStyle}
+                  >
+                    Dokumenti
+                  </Link>
 
-              <button style={smallRedButtonStyle} onClick={() => obrisiRadnika(r.id)}>
-                Obriši
-              </button>
+                  <button
+                    style={smallRedButtonStyle}
+                    onClick={() => obrisiRadnika(r.id)}
+                  >
+                    Obriši
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ))
@@ -2195,6 +2259,17 @@ const helperTextStyle: React.CSSProperties = {
   marginBottom: 12,
   color: "#4b5563",
   lineHeight: 1.6,
+};
+
+const infoBoxStyle: React.CSSProperties = {
+  border: "1px solid #bfdbfe",
+  background: "#eff6ff",
+  color: "#1e3a8a",
+  borderRadius: 14,
+  padding: 14,
+  marginBottom: 24,
+  lineHeight: 1.5,
+  fontWeight: 700,
 };
 
 const uploadGridStyle: React.CSSProperties = {
