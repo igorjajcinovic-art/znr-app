@@ -2,7 +2,7 @@ import { hashPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/server-auth";
 
-const ROLE_LABELS = new Set(["admin", "poslovoda"]);
+const ROLE_LABELS = new Set(["admin", "martina", "poslovoda"]);
 
 export async function GET(req: Request) {
   const admin = await requireAdmin(req);

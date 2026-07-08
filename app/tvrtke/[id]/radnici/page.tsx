@@ -148,6 +148,8 @@ export default function RadniciTvrtkePage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isAdmin = korisnickaRole === "admin";
+  const canEdit = isAdmin || korisnickaRole === "martina";
+  const canCreateDelete = isAdmin;
 
   useEffect(() => {
     if (!firmaId) return;
@@ -517,7 +519,7 @@ export default function RadniciTvrtkePage() {
 };
 
 const importCsv = async () => {
-  if (!isAdmin) {
+  if (!canCreateDelete) {
     setGreska("Nemate ovlast za uvoz radnika.");
     return;
   }
@@ -842,7 +844,7 @@ const importCsv = async () => {
   ]);
 
   const spremiRadnika = async () => {
-    if (!isAdmin) {
+    if (!canEdit) {
       setGreska("Nemate ovlast za spremanje radnika.");
       return;
     }
@@ -955,7 +957,7 @@ const importCsv = async () => {
   };
 
   const pokreniUredenje = (radnik: Radnik) => {
-    if (!isAdmin) {
+    if (!canEdit) {
       setGreska("Nemate ovlast za uređivanje radnika.");
       return;
     }
@@ -997,7 +999,7 @@ const importCsv = async () => {
   };
 
   const obrisiRadnika = async (id: string) => {
-    if (!isAdmin) {
+    if (!canCreateDelete) {
       setGreska("Nemate ovlast za brisanje radnika.");
       return;
     }
@@ -1131,15 +1133,15 @@ const importCsv = async () => {
           </div>
         </div>
 
-        {!isAdmin && (
+        {!canCreateDelete && (
           <div style={infoBoxStyle}>
-            Prijavljeni ste kao poslovođa. Na ovoj stranici možete pregledavati
-            radnike, filtere, detalje i upozorenja, dok su unos, uvoz,
-            uređivanje i brisanje dostupni administratoru.
+            {korisnickaRole === "martina"
+              ? "Prijavljeni ste kao Martina. Možete pregledavati i uređivati postojeće radnike, ali ne možete dodavati, uvoziti ni brisati zapise."
+              : "Prijavljeni ste kao poslovođa. Na ovoj stranici možete pregledavati radnike, filtere, detalje i upozorenja, dok su unos, uvoz, uređivanje i brisanje dostupni administratoru."}
           </div>
         )}
 
-        {isAdmin && (
+        {canCreateDelete && (
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>Uvoz radnika iz CSV-a</h2>
 
@@ -1336,7 +1338,7 @@ const importCsv = async () => {
           </div>
         </div>
 
-        {isAdmin && (
+        {(canCreateDelete || editId) && (
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
             {editId ? "Uređenje radnika" : "Unos radnika"}
@@ -1592,7 +1594,7 @@ const importCsv = async () => {
       </div>
     </div>
 
-    {isAdmin && (
+    {canEdit && (
     <div style={printActionsStyle}>
       <button style={grayButtonStyle} onClick={exportRadniciCsv}>
         Izvoz CSV
@@ -1625,7 +1627,7 @@ const importCsv = async () => {
     )}
   </div>
 
-  {isAdmin && (
+  {canCreateDelete && (
   <button
     style={smallRedButtonStyle}
     onClick={async () => {
@@ -1718,7 +1720,7 @@ const importCsv = async () => {
                       Detalji
                     </button>
 
-                    {isAdmin && (
+                    {canEdit && (
                       <>
                         <button
                           style={smallGrayButtonStyle}
@@ -1726,7 +1728,11 @@ const importCsv = async () => {
                         >
                           Uredi
                         </button>
+                      </>
+                    )}
 
+                    {canCreateDelete && (
+                      <>
                         <Link
                           href={`/tvrtke/${firmaId}/radnici/${r.id}#dokumenti-radnika`}
                           style={smallLinkButtonStyle}
@@ -1814,7 +1820,7 @@ const importCsv = async () => {
                 Detalji
               </button>
 
-              {isAdmin && (
+              {canEdit && (
                 <>
                   <button
                     style={smallGrayButtonStyle}
@@ -1822,7 +1828,11 @@ const importCsv = async () => {
                   >
                     Uredi
                   </button>
+                </>
+              )}
 
+              {canCreateDelete && (
+                <>
                   <Link
                     href={`/tvrtke/${firmaId}/radnici/${r.id}#dokumenti-radnika`}
                     style={smallLinkButtonStyle}

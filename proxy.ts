@@ -111,6 +111,21 @@ function poslovodaCanAccess(req: NextRequest) {
   );
 }
 
+function martinaCanAccess(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const method = req.method.toUpperCase();
+
+  if (pathname === "/korisnici") return false;
+
+  if (pathname.startsWith("/api")) {
+    if (pathname.startsWith("/api/auth")) return true;
+    if (pathname.startsWith("/api/korisnici")) return false;
+    return ["GET", "PUT", "PATCH"].includes(method);
+  }
+
+  return true;
+}
+
 function poslovodaCompanyHome(pathname: string) {
   const parts = pathname.split("/").filter(Boolean);
   return parts[0] === "tvrtke" && parts.length === 2 ? parts[1] : "";
@@ -145,7 +160,7 @@ export async function proxy(req: NextRequest) {
 
   const role = payload.role || "admin";
 
-  if (role !== "admin") {
+  if (role === "poslovoda") {
     const firmaId = poslovodaCompanyHome(pathname);
     if (firmaId) {
       return NextResponse.redirect(
@@ -154,7 +169,11 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  if (role !== "admin" && !poslovodaCanAccess(req)) {
+  if (role === "martina" && !martinaCanAccess(req)) {
+    return forbiddenRequest(req);
+  }
+
+  if (role === "poslovoda" && !poslovodaCanAccess(req)) {
     return forbiddenRequest(req);
   }
 

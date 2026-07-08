@@ -14,7 +14,13 @@ const praznaForma = {
   ime: "",
   email: "",
   lozinka: "",
-  role: "poslovoda",
+  role: "martina",
+};
+
+const roleLabel = (role: string) => {
+  if (role === "admin") return "Admin";
+  if (role === "martina") return "Martina";
+  return "Poslovoda";
 };
 
 export default function KorisniciPage() {
@@ -133,6 +139,7 @@ export default function KorisniciPage() {
               value={forma.role}
               onChange={(e) => setForma({ ...forma, role: e.target.value })}
             >
+              <option value="martina">Martina</option>
               <option value="poslovoda">Poslovoda</option>
               <option value="admin">Admin</option>
             </select>
@@ -177,7 +184,7 @@ export default function KorisniciPage() {
                     <td style={tdStyle}>{korisnik.email}</td>
                     <td style={tdStyle}>
                       <span style={pillStyle}>
-                        {korisnik.role === "admin" ? "Admin" : "Poslovoda"}
+                        {roleLabel(korisnik.role)}
                       </span>
                     </td>
                     <td style={tdStyle}>

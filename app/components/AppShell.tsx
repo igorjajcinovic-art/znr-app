@@ -186,6 +186,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const prikazaniNavItems =
     role === "admin"
       ? navItems
+      : role === "martina"
+      ? navItems.filter((item) => item.label !== "Korisnici")
       : navItems.filter((item) => poslovodaLabels.has(item.label));
 
   const SidebarContent = (
