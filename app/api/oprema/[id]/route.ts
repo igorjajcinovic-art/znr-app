@@ -1,6 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { parseHrDate } from "@/lib/dates";
 
+function normalizeVrsta(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -34,6 +38,22 @@ export async function PUT(
       return new Response("OZO se može dodati samo aktivnom radniku.", {
         status: 400,
       });
+    }
+
+    const postojeceAktivno = await prisma.oprema.findMany({
+      where: { firmaId, oib, status: "aktivno", NOT: { id } },
+      select: { vrsta: true },
+    });
+
+    if (
+      postojeceAktivno.some(
+        (zapis) => normalizeVrsta(zapis.vrsta) === normalizeVrsta(vrsta)
+      )
+    ) {
+      return new Response(
+        "Radnik vec ima aktivno zaduzenje za tu vrstu OZO. Prvo razduzi ili uredi postojeci zapis.",
+        { status: 409 }
+      );
     }
 
     const zapis = await prisma.oprema.update({

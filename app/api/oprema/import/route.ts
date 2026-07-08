@@ -9,6 +9,10 @@ type ImportRow = {
   napomena?: string | null;
 };
 
+function normalizeVrsta(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 function parseDate(value: unknown): Date | null {
   if (!value) return null;
 
@@ -66,6 +70,15 @@ export async function POST(req: Request) {
       select: { oib: true },
     });
     const aktivniOibSet = new Set(aktivniRadnici.map((radnik) => radnik.oib));
+    const aktivnaZaduzenja = await prisma.oprema.findMany({
+      where: { firmaId, status: "aktivno" },
+      select: { oib: true, vrsta: true },
+    });
+    const aktivnoPoRadnikuIVrsti = new Set(
+      aktivnaZaduzenja.map(
+        (zapis) => `${zapis.oib}|${normalizeVrsta(zapis.vrsta)}`
+      )
+    );
 
     for (const row of rows) {
       const oib = String(row.oib ?? "").trim();
@@ -78,6 +91,12 @@ export async function POST(req: Request) {
         Number.isNaN(kolicinaRaw) || kolicinaRaw < 1 ? 1 : kolicinaRaw;
 
       if (!oib || !vrsta || !datumIzdavanja || !aktivniOibSet.has(oib)) {
+        skipped += 1;
+        continue;
+      }
+
+      const duplicateKey = `${oib}|${normalizeVrsta(vrsta)}`;
+      if (aktivnoPoRadnikuIVrsti.has(duplicateKey)) {
         skipped += 1;
         continue;
       }
@@ -95,6 +114,7 @@ export async function POST(req: Request) {
       });
 
       imported += 1;
+      aktivnoPoRadnikuIVrsti.add(duplicateKey);
     }
 
     return Response.json({
