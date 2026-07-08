@@ -511,7 +511,38 @@ export default function RadnoVrijemePage() {
       ];
     });
 
+  const brojNepotvrdenihRadnihDana = () =>
+    prikazaniRadnici.reduce((sum, radnik) => {
+      return (
+        sum +
+        dani.filter((day) => {
+          const value = getCellValue(radnik.id, day);
+          return (
+            value.pocetak &&
+            value.kraj &&
+            !isAbsenceStatus(value.status) &&
+            value.status !== "zakljuceno"
+          );
+        }).length
+      );
+    }, 0);
+
+  const mozeIzvoz = () => {
+    const nepotvrdeno = brojNepotvrdenihRadnihDana();
+
+    if (nepotvrdeno > 0) {
+      alert(
+        `Prije izvoza potvrdi radno vrijeme kvačicom. Nepotvrđenih dana: ${nepotvrdeno}.`
+      );
+      return false;
+    }
+
+    return true;
+  };
+
   const exportCsv = () => {
+    if (!mozeIzvoz()) return;
+
     const headers = [
       "Radnik",
       "OIB",
@@ -535,6 +566,8 @@ export default function RadnoVrijemePage() {
   };
 
   const exportExcel = async () => {
+    if (!mozeIzvoz()) return;
+
     const XLSX = await import("xlsx");
     const workbook = XLSX.utils.book_new();
     const maxDays = 31;
@@ -801,7 +834,8 @@ export default function RadnoVrijemePage() {
             <h2 style={sectionTitleStyle}>Mjesecni unos po radniku</h2>
             <p style={mutedStyle}>
               Za radne dane je ponudeno {DEFAULT_START}-{DEFAULT_END}. Nedjelje
-              i blagdani su oznaceni, ali se mogu rucno upisati ako se radilo.
+              i blagdani su oznaceni, a radne dane treba potvrditi kvacicom
+              prije izvoza.
             </p>
           </div>
         </div>
