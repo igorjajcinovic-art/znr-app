@@ -27,9 +27,13 @@ type PreparedEntry = {
 
 function normalizeStatus(value: unknown) {
   const status = String(value ?? "evidentirano").trim().toLowerCase();
-  return ["evidentirano", "zakljuceno"].includes(status)
+  return ["evidentirano", "zakljuceno", "godisnji", "bolovanje", "neopravdano"].includes(status)
     ? status
     : "evidentirano";
+}
+
+function isAbsenceStatus(status: string) {
+  return ["godisnji", "bolovanje", "neopravdano"].includes(status);
 }
 
 function dateKey(date: Date) {
@@ -131,7 +135,7 @@ export async function POST(req: Request) {
 
       const existing = existingByCell.get(existingKey(radnik.id, entry.datum)) || [];
 
-      if (!entry.pocetak && !entry.kraj) {
+      if (!entry.pocetak && !entry.kraj && !isAbsenceStatus(entry.status)) {
         if (existing.length > 0) {
           await prisma.radnoVrijeme.deleteMany({
             where: { id: { in: existing.map((zapis) => zapis.id) } },
@@ -142,13 +146,16 @@ export async function POST(req: Request) {
       }
 
       if (
-        parseTimeToMinutes(entry.pocetak) === null ||
-        parseTimeToMinutes(entry.kraj) === null
+        !isAbsenceStatus(entry.status) &&
+        (parseTimeToMinutes(entry.pocetak) === null ||
+          parseTimeToMinutes(entry.kraj) === null)
       ) {
         continue;
       }
 
-      const ukupnoMin = calculateWorkMinutes(entry.pocetak, entry.kraj);
+      const ukupnoMin = isAbsenceStatus(entry.status)
+        ? 0
+        : calculateWorkMinutes(entry.pocetak, entry.kraj);
       if (ukupnoMin === null) continue;
 
       const data = {

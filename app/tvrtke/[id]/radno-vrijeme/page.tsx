@@ -52,7 +52,9 @@ type CellDraft = {
 
 const DEFAULT_START = "06:00";
 const DEFAULT_END = "14:00";
+const DEFAULT_DAY_MINUTES = 8 * 60;
 const WEEKDAYS = ["ned", "pon", "uto", "sri", "cet", "pet", "sub"];
+const ABSENCE_STATUSES = ["godisnji", "bolovanje", "neopravdano"];
 
 function todayMonth() {
   const today = new Date();
@@ -169,6 +171,23 @@ function formatMinutes(minutes: number) {
   const h = Math.floor(safe / 60);
   const m = safe % 60;
   return `${h}:${String(m).padStart(2, "0")}`;
+}
+
+function isAbsenceStatus(status: string) {
+  return ABSENCE_STATUSES.includes(status);
+}
+
+function absenceCode(status: string) {
+  if (status === "godisnji") return "GO";
+  if (status === "bolovanje") return "BO";
+  if (status === "neopravdano") return "NO";
+  return "";
+}
+
+function absenceHours(status: string) {
+  return isAbsenceStatus(status)
+    ? Number((DEFAULT_DAY_MINUTES / 60).toFixed(2))
+    : 0;
 }
 
 function monthTitle(month: string) {
@@ -362,6 +381,24 @@ export default function RadnoVrijemePage() {
     }));
   };
 
+  const updateDayStatus = (radnikId: string, day: DayInfo, status: string) => {
+    const key = cellKey(radnikId, day.iso);
+    const current = getCellValue(radnikId, day);
+    const absence = isAbsenceStatus(status);
+
+    setDrafts((prev) => ({
+      ...prev,
+      [key]: {
+        radnikId,
+        datum: day.iso,
+        pocetak: absence ? "" : current.pocetak || DEFAULT_START,
+        kraj: absence ? "" : current.kraj || DEFAULT_END,
+        status: status || "evidentirano",
+        napomena: current.napomena,
+      },
+    }));
+  };
+
   const clearCell = (radnikId: string, day: DayInfo) => {
     const key = cellKey(radnikId, day.iso);
     setDrafts((prev) => ({
@@ -458,6 +495,8 @@ export default function RadnoVrijemePage() {
     prikazaniRadnici.map((radnik) => {
       const dayValues = dani.map((day) => {
         const value = getCellValue(radnik.id, day);
+        const absence = absenceCode(value.status);
+        if (absence) return absence;
         if (!value.pocetak || !value.kraj) return "";
         return `${value.pocetak}-${value.kraj} (${formatMinutes(
           calculateMinutes(value.pocetak, value.kraj)
@@ -560,17 +599,24 @@ export default function RadnoVrijemePage() {
             ? calculateMinutes(value.pocetak, value.kraj)
             : 0;
         const hours = Number((minutes / 60).toFixed(2));
+        const absentHours = absenceHours(value.status);
+        const isGodisnji = value.status === "godisnji";
+        const isBolovanje = value.status === "bolovanje";
+        const isNeopravdano = value.status === "neopravdano";
         const workedOnHoliday = Boolean(
           day && (day.isSunday || day.isHoliday) && hours > 0
         );
         const nonWorkingHoliday = Boolean(
-          day && (day.isSunday || day.isHoliday) && hours === 0
+          day &&
+            (day.isSunday || day.isHoliday) &&
+            hours === 0 &&
+            !isAbsenceStatus(value.status)
         );
 
         const row = [
           dayNumber,
-          value.pocetak,
-          value.kraj,
+          isAbsenceStatus(value.status) ? "" : value.pocetak,
+          isAbsenceStatus(value.status) ? "" : value.kraj,
           hours || "",
           workedOnHoliday ? "" : hours || "",
           "",
@@ -580,21 +626,21 @@ export default function RadnoVrijemePage() {
           "",
           "",
           "",
-          "",
+          isGodisnji ? absentHours : "",
           "",
           "",
           nonWorkingHoliday ? 1 : "",
+          isBolovanje ? absentHours : "",
           "",
           "",
           "",
           "",
           "",
+          isNeopravdano ? absentHours : "",
           "",
           "",
           "",
-          "",
-          "",
-          day?.holidayName || value.napomena || "",
+          day?.holidayName || absenceCode(value.status) || value.napomena || "",
         ];
 
         row.forEach((cell, cellIndex) => {
@@ -708,7 +754,7 @@ export default function RadnoVrijemePage() {
 
           <div style={toolbarActionsStyle}>
             <button style={secondaryButtonStyle} onClick={popuniRadneDane}>
-              Popuni radne dane 08-16
+              Popuni radne dane 06-14
             </button>
             <button
               style={primaryButtonStyle}
@@ -741,6 +787,10 @@ export default function RadnoVrijemePage() {
           <span style={legendItemStyle}>
             <span style={{ ...legendDotStyle, background: "#fef3c7" }} />{" "}
             Nedjelja ili blagdan
+          </span>
+          <span style={legendItemStyle}>
+            <span style={{ ...legendDotStyle, background: "#fce7f3" }} />{" "}
+            GO / BO / NO
           </span>
         </div>
       </section>
@@ -798,6 +848,7 @@ export default function RadnoVrijemePage() {
                         value.pocetak && value.kraj
                           ? calculateMinutes(value.pocetak, value.kraj)
                           : 0;
+                      const absence = absenceCode(value.status);
 
                       return (
                         <td
@@ -812,12 +863,14 @@ export default function RadnoVrijemePage() {
                               ? suggestedCellStyle
                               : {}),
                             ...(value.source === "draft" ? draftCellStyle : {}),
+                            ...(absence ? absenceCellStyle : {}),
                           }}
                         >
                           <div style={cellInputsStyle}>
                             <input
                               type="time"
                               value={value.pocetak}
+                              disabled={Boolean(absence)}
                               onChange={(e) =>
                                 updateCell(
                                   radnik.id,
@@ -832,20 +885,35 @@ export default function RadnoVrijemePage() {
                             <input
                               type="time"
                               value={value.kraj}
+                              disabled={Boolean(absence)}
                               onChange={(e) =>
                                 updateCell(radnik.id, day, "kraj", e.target.value)
                               }
                               style={timeInputStyle}
                               aria-label={`Kraj ${radnik.ime} ${day.iso}`}
                             />
+                            <select
+                              value={isAbsenceStatus(value.status) ? value.status : ""}
+                              onChange={(e) =>
+                                updateDayStatus(radnik.id, day, e.target.value)
+                              }
+                              style={absenceSelectStyle}
+                              aria-label={`Oznaka odsutnosti ${radnik.ime} ${day.iso}`}
+                            >
+                              <option value="">Rad</option>
+                              <option value="godisnji">GO</option>
+                              <option value="bolovanje">BO</option>
+                              <option value="neopravdano">NO</option>
+                            </select>
                           </div>
                           <div style={cellFooterStyle}>
-                            <span>{minutes ? formatMinutes(minutes) : "-"}</span>
+                            <span>{absence || (minutes ? formatMinutes(minutes) : "-")}</span>
                             <div style={cellButtonsStyle}>
                               <label style={confirmLabelStyle} title="Potvrdi radno vrijeme">
                                 <input
                                   type="checkbox"
                                   checked={value.status === "zakljuceno"}
+                                  disabled={Boolean(absence)}
                                   onChange={(e) =>
                                     updateCell(
                                       radnik.id,
@@ -1197,6 +1265,10 @@ const draftCellStyle: React.CSSProperties = {
   background: "#fef9c3",
 };
 
+const absenceCellStyle: React.CSSProperties = {
+  background: "#fce7f3",
+};
+
 const subTextStyle: React.CSSProperties = {
   marginTop: 3,
   color: "#64748b",
@@ -1217,6 +1289,17 @@ const timeInputStyle: React.CSSProperties = {
   fontSize: 12,
   boxSizing: "border-box",
   background: "rgba(255,255,255,0.78)",
+};
+
+const absenceSelectStyle: React.CSSProperties = {
+  width: "100%",
+  minHeight: 28,
+  border: "1px solid #cbd5e1",
+  borderRadius: 6,
+  padding: "3px 4px",
+  fontSize: 12,
+  boxSizing: "border-box",
+  background: "rgba(255,255,255,0.86)",
 };
 
 const cellFooterStyle: React.CSSProperties = {
