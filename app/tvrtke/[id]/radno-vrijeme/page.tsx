@@ -171,6 +171,16 @@ function formatMinutes(minutes: number) {
   return `${h}:${String(m).padStart(2, "0")}`;
 }
 
+function monthTitle(month: string) {
+  const [year, monthNumber] = month.split("-");
+  return `${monthNumber}/${year}`;
+}
+
+function safeSheetName(value: string, index: number) {
+  const clean = value.replace(/[\\/?*[\]:]/g, " ").trim().slice(0, 24);
+  return `${index + 1}. ${clean || "Radnik"}`.slice(0, 31);
+}
+
 function csvEscape(value: string | number | null | undefined) {
   return `"${String(value ?? "").replace(/"/g, '""')}"`;
 }
@@ -487,22 +497,150 @@ export default function RadnoVrijemePage() {
 
   const exportExcel = async () => {
     const XLSX = await import("xlsx");
-    const headers = [
-      "Radnik",
-      "OIB",
-      ...dani.map((day) => `${day.day}.${day.weekday}`),
-      "Ukupno",
-    ];
-    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportRows()]);
-    worksheet["!cols"] = [
-      { wch: 28 },
-      { wch: 14 },
-      ...dani.map(() => ({ wch: 14 })),
-      { wch: 12 },
+    const workbook = XLSX.utils.book_new();
+    const maxDays = 31;
+    const categoryHeaders = [
+      "Red. br. / Dan u mjesecu",
+      "Pocetak rada (hh:mm)",
+      "Zavrsetak rada (hh:mm)",
+      "Ukupno dnevno vrijeme",
+      "Od toga: redovan rad",
+      "Od toga: rad nocu",
+      "Od toga: sati prekovremenog rada",
+      "Sati terenskog rada",
+      "Sati rada nedjeljom, blagdanom ili neradnim danima",
+      "Vrijeme i sati zastoja, prekida rada i sl.",
+      "Sati u dane blagdana ili neradnih dana kada radnik ne radi",
+      "Sati pripravnosti",
+      "Sati koristenja godisnjeg odmora",
+      "Sati koristenja tjednog odmora",
+      "Sati koristenja dnevnog odmora",
+      "Neradni dani i blagdani utvrdeni zakonom",
+      "Sati privremene nesposob. za rad (bolovanje)",
+      "Sati placenog dopusta i odsutnosti s rada",
+      "Sati neplacenog dopusta",
+      "Sati ocinskog dopusta i dopusta drugog posvojitelja",
+      "Sati privremene nesposob. za rad (bolovanje)",
+      "Sati nenazocnosti tijekom dnevnog rasporeda radnog vremena",
+      "Sati nenazocnosti tijekom dnevnog rasporeda svojom krivnjom",
+      "Sati nenazocnosti zbog vojne obveze ili sl. ugovornoj obvezi",
+      "Sati provedeni u strajku",
+      "Sati iskljucenja s rada (lockout)",
+      "Napomena",
     ];
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Radno vrijeme");
+    prikazaniRadnici.forEach((radnik, index) => {
+      const rows: (string | number)[][] = [
+        ["EVIDENCIJA O RADNOM VREMENU"],
+        ["Poslodavac:", tvrtka?.naziv || ""],
+        ["OIB poslodavca:", tvrtka?.oib || ""],
+        ["Adresa:", tvrtka?.adresa || ""],
+        ["Ime i prezime radnika:", radnik.ime],
+        ["OIB radnika:", radnik.oib],
+        ["Mjesec i godina:", monthTitle(mjesec)],
+        [],
+        categoryHeaders,
+      ];
+
+      const totals = Array(categoryHeaders.length).fill(0) as number[];
+
+      for (let dayNumber = 1; dayNumber <= maxDays; dayNumber += 1) {
+        const day = dani[dayNumber - 1];
+        const value = day
+          ? getCellValue(radnik.id, day)
+          : {
+              pocetak: "",
+              kraj: "",
+              napomena: "",
+              status: "evidentirano",
+              source: "empty" as const,
+            };
+        const minutes =
+          value.pocetak && value.kraj
+            ? calculateMinutes(value.pocetak, value.kraj)
+            : 0;
+        const hours = Number((minutes / 60).toFixed(2));
+        const workedOnHoliday = Boolean(
+          day && (day.isSunday || day.isHoliday) && hours > 0
+        );
+        const nonWorkingHoliday = Boolean(
+          day && (day.isSunday || day.isHoliday) && hours === 0
+        );
+
+        const row = [
+          dayNumber,
+          value.pocetak,
+          value.kraj,
+          hours || "",
+          workedOnHoliday ? "" : hours || "",
+          "",
+          "",
+          "",
+          workedOnHoliday ? hours : "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          nonWorkingHoliday ? 1 : "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          day?.holidayName || value.napomena || "",
+        ];
+
+        row.forEach((cell, cellIndex) => {
+          if (typeof cell === "number" && cellIndex > 2) {
+            totals[cellIndex] += cell;
+          }
+        });
+
+        rows.push(row);
+      }
+
+      rows.push([
+        "UKUPNO",
+        "",
+        "",
+        ...totals.slice(3).map((total) => (total ? Number(total.toFixed(2)) : 0)),
+      ]);
+      rows.push([]);
+      rows.push(["Vlastorucnim potpisom potvrdujem pod materijalnom i kaznenom odgovornoscu da sam radio/la po gore evidentiranom radnom vremenu."]);
+      rows.push(["Potpis radnika:", ""]);
+
+      const worksheet = XLSX.utils.aoa_to_sheet(rows);
+      worksheet["!cols"] = [
+        { wch: 10 },
+        { wch: 16 },
+        { wch: 16 },
+        { wch: 14 },
+        { wch: 14 },
+        ...Array.from({ length: 21 }, () => ({ wch: 18 })),
+        { wch: 28 },
+      ];
+      worksheet["!rows"] = rows.map((_, rowIndex) => ({
+        hpt: rowIndex === 8 ? 58 : 20,
+      }));
+      worksheet["!merges"] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: categoryHeaders.length - 1 } },
+        { s: { r: 40, c: 0 }, e: { r: 40, c: categoryHeaders.length - 1 } },
+      ];
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        safeSheetName(radnik.ime, index)
+      );
+    });
+
     XLSX.writeFile(
       workbook,
       `radno-vrijeme-${tvrtka?.naziv || "tvrtka"}-${mjesec}.xlsx`
