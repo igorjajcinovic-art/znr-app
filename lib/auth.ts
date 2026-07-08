@@ -6,6 +6,7 @@ export const TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 type TokenPayload = {
   userId: string;
   email: string;
+  role?: string;
   exp?: number;
 };
 
@@ -27,7 +28,7 @@ export function verifyPassword(password: string, stored: string) {
   );
 }
 
-export function createToken(payload: { userId: string; email: string }) {
+export function createToken(payload: { userId: string; email: string; role?: string }) {
   const body = Buffer.from(
     JSON.stringify({
       ...payload,

@@ -29,7 +29,8 @@ export default function LoginPage() {
         throw new Error(text || "Neuspješna prijava.");
       }
 
-      window.location.href = "/";
+      const data = await res.json();
+      window.location.href = data?.user?.role === "poslovoda" ? "/tvrtke" : "/";
     } catch (err) {
       setGreska(err instanceof Error ? err.message : "Greška kod prijave.");
     } finally {

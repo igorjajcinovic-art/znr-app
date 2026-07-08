@@ -10,6 +10,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [brojUpozorenja, setBrojUpozorenja] = useState<number>(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [role, setRole] = useState("admin");
 
   useEffect(() => {
     let active = true;
@@ -35,6 +36,27 @@ export default function AppShell({ children }: { children: ReactNode }) {
       active = false;
     };
   }, [pathname]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function ucitajKorisnika() {
+      try {
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
+        if (!res.ok || !active) return;
+        const data = await res.json();
+        setRole(data?.user?.role || "admin");
+      } catch {
+        if (active) setRole("admin");
+      }
+    }
+
+    ucitajKorisnika();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const odjava = async () => {
     await fetch("/api/auth/logout", {
@@ -74,6 +96,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     if (pathname.includes("/radno-vrijeme")) return "Radno vrijeme";
     if (pathname.includes("/ugovori")) return "Ugovori";
     if (pathname.includes("/upozorenja")) return "Upozorenja";
+    if (pathname.includes("/korisnici")) return "Korisnici";
     if (pathname.startsWith("/tvrtke/")) return "Detalji tvrtke";
 
     return "ZNR aplikacija";
@@ -144,7 +167,26 @@ export default function AppShell({ children }: { children: ReactNode }) {
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/upozorenja` : "/tvrtke",
       icon: "!",
     },
+    {
+      label: "Korisnici",
+      href: "/korisnici",
+      icon: "K",
+    },
   ];
+
+  const poslovodaLabels = new Set([
+    "Dashboard",
+    "Tvrtke",
+    "Radnici",
+    "OZO oprema",
+    "Radno vrijeme",
+    "Upozorenja",
+  ]);
+
+  const prikazaniNavItems =
+    role === "admin"
+      ? navItems
+      : navItems.filter((item) => poslovodaLabels.has(item.label));
 
   const SidebarContent = (
     <>
@@ -166,7 +208,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </Link>
 
       <nav style={navStyle}>
-        {navItems.map((item) => {
+        {prikazaniNavItems.map((item) => {
           const active =
             item.href === "/tvrtke"
               ? pathname === "/tvrtke"

@@ -47,6 +47,7 @@ export async function POST(req: Request) {
     const token = createToken({
       userId: user.id,
       email: user.email,
+      role: user.role,
     });
     const secureCookie =
       process.env.NODE_ENV === "production" ? "; Secure" : "";
