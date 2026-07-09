@@ -50,6 +50,13 @@ type CellDraft = {
   napomena: string;
 };
 
+type BolovanjeForma = {
+  radnikId: string;
+  datumOd: string;
+  datumDo: string;
+  napomena: string;
+};
+
 const DEFAULT_START = "06:00";
 const DEFAULT_END = "14:00";
 const DEFAULT_DAY_MINUTES = 8 * 60;
@@ -69,6 +76,12 @@ function localIso(date: Date) {
     2,
     "0"
   )}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function dateFromIso(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
 }
 
 function addDays(date: Date, days: number) {
@@ -215,6 +228,12 @@ export default function RadnoVrijemePage() {
   const [mjesec, setMjesec] = useState(todayMonth());
   const [filterRadnik, setFilterRadnik] = useState("");
   const [drafts, setDrafts] = useState<Record<string, CellDraft>>({});
+  const [bolovanjeForma, setBolovanjeForma] = useState<BolovanjeForma>({
+    radnikId: "",
+    datumOd: "",
+    datumDo: "",
+    napomena: "",
+  });
   const [ucitavanje, setUcitavanje] = useState(true);
   const [spremanje, setSpremanje] = useState(false);
   const [greska, setGreska] = useState("");
@@ -440,6 +459,58 @@ export default function RadnoVrijemePage() {
     });
   };
 
+  const primijeniBolovanje = () => {
+    const radnikId = bolovanjeForma.radnikId;
+    const start = dateFromIso(bolovanjeForma.datumOd);
+    const end = dateFromIso(bolovanjeForma.datumDo);
+
+    if (!radnikId || !start || !end) {
+      alert("Odaberi radnika te datum od i datum do.");
+      return;
+    }
+
+    if (end < start) {
+      alert("Datum do ne moze biti prije datuma od.");
+      return;
+    }
+
+    const dayMap = new Map(dani.map((day) => [day.iso, day]));
+    const noviZapisi: CellDraft[] = [];
+    let current = new Date(start);
+
+    while (current <= end) {
+      const iso = localIso(current);
+      const day = dayMap.get(iso);
+
+      if (day && !day.isSunday && !day.isHoliday) {
+        noviZapisi.push({
+          radnikId,
+          datum: iso,
+          pocetak: "",
+          kraj: "",
+          status: "bolovanje",
+          napomena: bolovanjeForma.napomena.trim(),
+        });
+      }
+
+      current = addDays(current, 1);
+    }
+
+    setDrafts((prev) => {
+      const next = { ...prev };
+      noviZapisi.forEach((entry) => {
+        next[cellKey(entry.radnikId, entry.datum)] = entry;
+      });
+      return next;
+    });
+
+    setPoruka(
+      noviZapisi.length > 0
+        ? `Bolovanje je pripremljeno za ${noviZapisi.length} radnih dana. Klikni Spremi izmjene za upis.`
+        : "U odabranom rasponu nema radnih dana u prikazanom mjesecu."
+    );
+  };
+
   const rowTotal = (radnikId: string) =>
     dani.reduce((sum, day) => {
       const value = getCellValue(radnikId, day);
@@ -646,6 +717,14 @@ export default function RadnoVrijemePage() {
             !isAbsenceStatus(value.status)
         );
 
+        const noteText = [
+          day?.holidayName,
+          absenceCode(value.status),
+          value.napomena,
+        ]
+          .filter(Boolean)
+          .join(" - ");
+
         const row = [
           dayNumber,
           isAbsenceStatus(value.status) ? "" : value.pocetak,
@@ -673,7 +752,7 @@ export default function RadnoVrijemePage() {
           "",
           "",
           "",
-          day?.holidayName || absenceCode(value.status) || value.napomena || "",
+          noteText,
         ];
 
         row.forEach((cell, cellIndex) => {
@@ -802,6 +881,87 @@ export default function RadnoVrijemePage() {
             <button style={primaryButtonStyle} onClick={exportExcel}>
               Izvoz Excel
             </button>
+          </div>
+        </div>
+
+        <div style={bolovanjePanelStyle}>
+          <div>
+            <h2 style={smallPanelTitleStyle}>Unesi bolovanje</h2>
+            <p style={mutedStyle}>
+              Odaberi radnika i raspon datuma. Aplikacija ce oznaciti radne dane
+              u ovom mjesecu kao BO.
+            </p>
+          </div>
+
+          <div style={bolovanjeGridStyle}>
+            <Field label="Radnik">
+              <select
+                style={inputStyle}
+                value={bolovanjeForma.radnikId}
+                onChange={(e) =>
+                  setBolovanjeForma({
+                    ...bolovanjeForma,
+                    radnikId: e.target.value,
+                  })
+                }
+              >
+                <option value="">Odaberi radnika</option>
+                {aktivniRadnici.map((radnik) => (
+                  <option key={radnik.id} value={radnik.id}>
+                    {radnik.ime}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Datum od">
+              <input
+                type="date"
+                style={inputStyle}
+                value={bolovanjeForma.datumOd}
+                onChange={(e) =>
+                  setBolovanjeForma({
+                    ...bolovanjeForma,
+                    datumOd: e.target.value,
+                    datumDo: bolovanjeForma.datumDo || e.target.value,
+                  })
+                }
+              />
+            </Field>
+
+            <Field label="Datum do">
+              <input
+                type="date"
+                style={inputStyle}
+                value={bolovanjeForma.datumDo}
+                onChange={(e) =>
+                  setBolovanjeForma({
+                    ...bolovanjeForma,
+                    datumDo: e.target.value,
+                  })
+                }
+              />
+            </Field>
+
+            <Field label="Napomena / doznaka">
+              <input
+                style={inputStyle}
+                value={bolovanjeForma.napomena}
+                onChange={(e) =>
+                  setBolovanjeForma({
+                    ...bolovanjeForma,
+                    napomena: e.target.value,
+                  })
+                }
+                placeholder="npr. doznaka dostavljena"
+              />
+            </Field>
+
+            <div style={bolovanjeActionStyle}>
+              <button style={primaryButtonStyle} onClick={primijeniBolovanje}>
+                Primijeni BO
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1085,6 +1245,33 @@ const toolbarActionsStyle: React.CSSProperties = {
   gap: 10,
   flexWrap: "wrap",
   justifyContent: "flex-end",
+};
+
+const bolovanjePanelStyle: React.CSSProperties = {
+  marginTop: 18,
+  padding: 14,
+  borderRadius: 8,
+  border: "1px solid #bae6fd",
+  background: "#f0f9ff",
+};
+
+const smallPanelTitleStyle: React.CSSProperties = {
+  margin: "0 0 4px",
+  color: "#0f172a",
+  fontSize: 18,
+};
+
+const bolovanjeGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(220px, 1.2fr) repeat(2, minmax(150px, 0.8fr)) minmax(220px, 1fr) auto",
+  gap: 12,
+  alignItems: "end",
+  marginTop: 12,
+};
+
+const bolovanjeActionStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "end",
 };
 
 const fieldStyle: React.CSSProperties = {
