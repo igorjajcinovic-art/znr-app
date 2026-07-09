@@ -118,6 +118,7 @@ export default function DnevnikPromjenaPage() {
             >
               <option value="">Svi moduli</option>
               <option value="radnik">Radnici</option>
+              <option value="radno_vrijeme">Radno vrijeme</option>
               <option value="korisnik">Korisnici</option>
             </select>
           </label>

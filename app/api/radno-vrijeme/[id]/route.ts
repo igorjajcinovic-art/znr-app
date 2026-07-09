@@ -1,10 +1,12 @@
 import { parseHrDate } from "@/lib/dates";
+import { recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import {
   calculateWorkMinutes,
   ensureRadnoVrijemeTable,
   parseTimeToMinutes,
 } from "@/lib/radno-vrijeme";
+import { getCurrentUser } from "@/lib/server-auth";
 
 function normalizeStatus(value: unknown) {
   const status = String(value ?? "evidentirano").trim().toLowerCase();
@@ -20,8 +22,13 @@ export async function PUT(
   try {
     await ensureRadnoVrijemeTable();
 
+    const user = await getCurrentUser(req);
     const { id } = await params;
     const body = await req.json();
+
+    const postojeci = await prisma.radnoVrijeme.findUnique({
+      where: { id },
+    });
 
     const firmaId = String(body?.firmaId ?? "").trim();
     const radnikId = String(body?.radnikId ?? "").trim();
@@ -72,6 +79,17 @@ export async function PUT(
       },
     });
 
+    await recordAuditLog({
+      user,
+      action: "update",
+      entityType: "radno_vrijeme",
+      entityId: zapis.id,
+      entityLabel: `${zapis.oib} - ${zapis.datum.toISOString().slice(0, 10)}`,
+      firmaId: zapis.firmaId,
+      oldData: postojeci,
+      newData: zapis,
+    });
+
     return Response.json(zapis);
   } catch (error) {
     console.error(error);
@@ -80,16 +98,33 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureRadnoVrijemeTable();
 
+    const user = await getCurrentUser(req);
     const { id } = await params;
+
+    const postojeci = await prisma.radnoVrijeme.findUnique({
+      where: { id },
+    });
 
     await prisma.radnoVrijeme.delete({
       where: { id },
+    });
+
+    await recordAuditLog({
+      user,
+      action: "delete",
+      entityType: "radno_vrijeme",
+      entityId: postojeci?.id ?? id,
+      entityLabel: postojeci
+        ? `${postojeci.oib} - ${postojeci.datum.toISOString().slice(0, 10)}`
+        : id,
+      firmaId: postojeci?.firmaId ?? null,
+      oldData: postojeci,
     });
 
     return Response.json({ ok: true });

@@ -1,10 +1,12 @@
 import { parseHrDate } from "@/lib/dates";
+import { recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import {
   calculateWorkMinutes,
   ensureRadnoVrijemeTable,
   parseTimeToMinutes,
 } from "@/lib/radno-vrijeme";
+import { getCurrentUser } from "@/lib/server-auth";
 
 function normalizeStatus(value: unknown) {
   const status = String(value ?? "evidentirano").trim().toLowerCase();
@@ -71,6 +73,7 @@ export async function POST(req: Request) {
   try {
     await ensureRadnoVrijemeTable();
 
+    const user = await getCurrentUser(req);
     const body = await req.json();
 
     const firmaId = String(body?.firmaId ?? "").trim();
@@ -119,6 +122,16 @@ export async function POST(req: Request) {
         status,
         napomena: body?.napomena ? String(body.napomena).trim() : null,
       },
+    });
+
+    await recordAuditLog({
+      user,
+      action: "create",
+      entityType: "radno_vrijeme",
+      entityId: zapis.id,
+      entityLabel: `${zapis.oib} - ${zapis.datum.toISOString().slice(0, 10)}`,
+      firmaId: zapis.firmaId,
+      newData: zapis,
     });
 
     return Response.json(zapis, { status: 201 });

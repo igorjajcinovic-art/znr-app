@@ -1,10 +1,12 @@
 import { parseHrDate } from "@/lib/dates";
+import { recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import {
   calculateWorkMinutes,
   ensureRadnoVrijemeTable,
   parseTimeToMinutes,
 } from "@/lib/radno-vrijeme";
+import { getCurrentUser } from "@/lib/server-auth";
 
 type EntryInput = {
   radnikId?: unknown;
@@ -48,6 +50,7 @@ export async function POST(req: Request) {
   try {
     await ensureRadnoVrijemeTable();
 
+    const user = await getCurrentUser(req);
     const body = await req.json();
     const firmaId = String(body?.firmaId ?? "").trim();
     const entries = Array.isArray(body?.entries)
@@ -128,6 +131,8 @@ export async function POST(req: Request) {
 
     let saved = 0;
     let deleted = 0;
+    const savedEntries: Array<Record<string, unknown>> = [];
+    const deletedEntries: Array<Record<string, unknown>> = [];
 
     for (const entry of preparedEntries) {
       const radnik = radnikPoId.get(entry.radnikId);
@@ -141,6 +146,18 @@ export async function POST(req: Request) {
             where: { id: { in: existing.map((zapis) => zapis.id) } },
           });
           deleted += existing.length;
+          deletedEntries.push(
+            ...existing.map((zapis) => ({
+              id: zapis.id,
+              radnikId: zapis.radnikId,
+              oib: zapis.oib,
+              datum: dateKey(zapis.datum),
+              pocetak: zapis.pocetak,
+              kraj: zapis.kraj,
+              status: zapis.status,
+              napomena: zapis.napomena,
+            }))
+          );
         }
         continue;
       }
@@ -185,8 +202,34 @@ export async function POST(req: Request) {
         await prisma.radnoVrijeme.create({ data });
       }
 
+      savedEntries.push({
+        radnikId: data.radnikId,
+        oib: data.oib,
+        datum: dateKey(data.datum),
+        pocetak: data.pocetak,
+        kraj: data.kraj,
+        ukupnoMin: data.ukupnoMin,
+        status: data.status,
+        napomena: data.napomena,
+      });
       saved += 1;
     }
+
+    await recordAuditLog({
+      user,
+      action: "update",
+      entityType: "radno_vrijeme",
+      entityLabel: `Mjesečna evidencija (${saved} spremljeno, ${deleted} obrisano)`,
+      firmaId,
+      oldData: {
+        deleted,
+        deletedEntries,
+      },
+      newData: {
+        saved,
+        savedEntries,
+      },
+    });
 
     return Response.json({ ok: true, saved, deleted });
   } catch (error) {
