@@ -17,6 +17,13 @@ const praznaForma = {
   role: "martina",
 };
 
+const praznaEditForma = {
+  ime: "",
+  email: "",
+  lozinka: "",
+  role: "martina",
+};
+
 const roleLabel = (role: string) => {
   if (role === "admin") return "Admin";
   if (role === "martina") return "Martina";
@@ -26,6 +33,8 @@ const roleLabel = (role: string) => {
 export default function KorisniciPage() {
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [forma, setForma] = useState(praznaForma);
+  const [editId, setEditId] = useState("");
+  const [editForma, setEditForma] = useState(praznaEditForma);
   const [ucitavanje, setUcitavanje] = useState(true);
   const [spremanje, setSpremanje] = useState(false);
   const [greska, setGreska] = useState("");
@@ -78,6 +87,57 @@ export default function KorisniciPage() {
 
       setForma(praznaForma);
       setPoruka("Korisnik je dodan.");
+      await ucitajKorisnike();
+    } catch (err) {
+      setGreska(err instanceof Error ? err.message : "Greska pri spremanju.");
+    } finally {
+      setSpremanje(false);
+    }
+  };
+
+  const pokreniUredenje = (korisnik: Korisnik) => {
+    setEditId(korisnik.id);
+    setEditForma({
+      ime: korisnik.ime,
+      email: korisnik.email,
+      lozinka: "",
+      role: korisnik.role,
+    });
+    setGreska("");
+    setPoruka("");
+  };
+
+  const odustaniUredenje = () => {
+    setEditId("");
+    setEditForma(praznaEditForma);
+  };
+
+  const spremiKorisnika = async () => {
+    if (!editId) return;
+
+    if (!editForma.ime || !editForma.email || !editForma.role) {
+      alert("Unesi ime, email i ulogu.");
+      return;
+    }
+
+    try {
+      setSpremanje(true);
+      setGreska("");
+      setPoruka("");
+
+      const res = await fetch(`/api/korisnici/${editId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForma),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Ne mogu spremiti korisnika.");
+      }
+
+      odustaniUredenje();
+      setPoruka("Korisnik je spremljen.");
       await ucitajKorisnike();
     } catch (err) {
       setGreska(err instanceof Error ? err.message : "Greska pri spremanju.");
@@ -160,6 +220,86 @@ export default function KorisniciPage() {
         {poruka ? <div style={successStyle}>{poruka}</div> : null}
       </section>
 
+      {editId ? (
+        <section style={cardStyle}>
+          <h2 style={sectionTitleStyle}>Uredi korisnika</h2>
+          <p style={mutedStyle}>
+            Lozinka se ne prikazuje zbog sigurnosti. Ako upises novu lozinku,
+            korisniku ce biti postavljena ta nova lozinka.
+          </p>
+
+          <div style={{ ...formGridStyle, marginTop: 14 }}>
+            <label style={fieldStyle}>
+              <span style={labelStyle}>Ime</span>
+              <input
+                style={inputStyle}
+                value={editForma.ime}
+                onChange={(e) =>
+                  setEditForma({ ...editForma, ime: e.target.value })
+                }
+              />
+            </label>
+
+            <label style={fieldStyle}>
+              <span style={labelStyle}>Email / korisnicko ime</span>
+              <input
+                style={inputStyle}
+                value={editForma.email}
+                onChange={(e) =>
+                  setEditForma({ ...editForma, email: e.target.value })
+                }
+              />
+            </label>
+
+            <label style={fieldStyle}>
+              <span style={labelStyle}>Nova lozinka</span>
+              <input
+                type="password"
+                style={inputStyle}
+                value={editForma.lozinka}
+                onChange={(e) =>
+                  setEditForma({ ...editForma, lozinka: e.target.value })
+                }
+                placeholder="ostavi prazno ako se ne mijenja"
+              />
+            </label>
+
+            <label style={fieldStyle}>
+              <span style={labelStyle}>Uloga</span>
+              <select
+                style={inputStyle}
+                value={editForma.role}
+                onChange={(e) =>
+                  setEditForma({ ...editForma, role: e.target.value })
+                }
+              >
+                <option value="martina">Martina</option>
+                <option value="poslovoda">Poslovoda</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+          </div>
+
+          <div style={actionRowStyle}>
+            <button
+              style={primaryButtonStyle}
+              onClick={spremiKorisnika}
+              disabled={spremanje}
+            >
+              {spremanje ? "Spremanje..." : "Spremi korisnika"}
+            </button>
+
+            <button
+              style={secondaryButtonStyle}
+              onClick={odustaniUredenje}
+              disabled={spremanje}
+            >
+              Odustani
+            </button>
+          </div>
+        </section>
+      ) : null}
+
       <section style={cardStyle}>
         <h2 style={sectionTitleStyle}>Postojeci korisnici</h2>
         {ucitavanje ? (
@@ -175,6 +315,7 @@ export default function KorisniciPage() {
                   <th style={thStyle}>Email</th>
                   <th style={thStyle}>Uloga</th>
                   <th style={thStyle}>Kreiran</th>
+                  <th style={thStyle}>Akcije</th>
                 </tr>
               </thead>
               <tbody>
@@ -189,6 +330,14 @@ export default function KorisniciPage() {
                     </td>
                     <td style={tdStyle}>
                       {new Date(korisnik.createdAt).toLocaleDateString("hr-HR")}
+                    </td>
+                    <td style={tdStyle}>
+                      <button
+                        style={secondaryButtonStyle}
+                        onClick={() => pokreniUredenje(korisnik)}
+                      >
+                        Uredi
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -285,6 +434,16 @@ const primaryButtonStyle: React.CSSProperties = {
   border: "none",
   background: "#111827",
   color: "white",
+  fontWeight: 900,
+  cursor: "pointer",
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  padding: "9px 12px",
+  borderRadius: 8,
+  border: "1px solid #cbd5e1",
+  background: "#ffffff",
+  color: "#0f172a",
   fontWeight: 900,
   cursor: "pointer",
 };
