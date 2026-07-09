@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { parseHrDate } from "@/lib/dates";
+import { recordAuditLog } from "@/lib/audit";
+import { getCurrentUser } from "@/lib/server-auth";
 
 function parseBool(value: unknown): boolean {
   if (typeof value === "boolean") return value;
@@ -16,6 +18,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getCurrentUser(req);
     const { id } = await params;
     const body = await req.json();
 
@@ -97,6 +100,17 @@ export async function PUT(
       return azuriraniRadnik;
     });
 
+    await recordAuditLog({
+      user,
+      action: "update",
+      entityType: "radnik",
+      entityId: radnik.id,
+      entityLabel: radnik.ime,
+      firmaId: radnik.firmaId,
+      oldData: postojeci,
+      newData: radnik,
+    });
+
     return Response.json(radnik);
   } catch (error) {
     console.error(error);
@@ -105,14 +119,29 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getCurrentUser(req);
     const { id } = await params;
+
+    const postojeci = await prisma.radnik.findUnique({
+      where: { id },
+    });
 
     await prisma.radnik.delete({
       where: { id },
+    });
+
+    await recordAuditLog({
+      user,
+      action: "delete",
+      entityType: "radnik",
+      entityId: postojeci?.id ?? id,
+      entityLabel: postojeci?.ime ?? id,
+      firmaId: postojeci?.firmaId ?? null,
+      oldData: postojeci,
     });
 
     return Response.json({ ok: true });

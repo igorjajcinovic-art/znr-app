@@ -97,6 +97,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     if (pathname.includes("/ugovori")) return "Ugovori";
     if (pathname.includes("/upozorenja")) return "Upozorenja";
     if (pathname.includes("/korisnici")) return "Korisnici";
+    if (pathname.includes("/dnevnik-promjena")) return "Dnevnik promjena";
     if (pathname.startsWith("/tvrtke/")) return "Detalji tvrtke";
 
     return "ZNR aplikacija";
@@ -171,6 +172,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
       label: "Korisnici",
       href: "/korisnici",
       icon: "K",
+    },
+    {
+      label: "Dnevnik promjena",
+      href: "/dnevnik-promjena",
+      icon: "D",
     },
   ];
 

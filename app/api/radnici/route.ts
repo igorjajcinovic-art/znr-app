@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { parseHrDate } from "@/lib/dates";
+import { recordAuditLog } from "@/lib/audit";
+import { getCurrentUser } from "@/lib/server-auth";
 
 function parseBool(value: unknown): boolean {
   if (typeof value === "boolean") return value;
@@ -42,6 +44,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const user = await getCurrentUser(req);
     const body = await req.json();
 
     const firmaId = String(body?.firmaId ?? "").trim();
@@ -117,6 +120,16 @@ export async function POST(req: Request) {
       return kreiraniRadnik;
     });
 
+    await recordAuditLog({
+      user,
+      action: "create",
+      entityType: "radnik",
+      entityId: radnik.id,
+      entityLabel: radnik.ime,
+      firmaId: radnik.firmaId,
+      newData: radnik,
+    });
+
     return Response.json(radnik);
   } catch (error) {
     console.error("CREATE RADNIK ERROR:", error);
@@ -129,6 +142,7 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const user = await getCurrentUser(req);
     const { searchParams } = new URL(req.url);
     const firmaId = searchParams.get("firmaId");
 
@@ -136,8 +150,21 @@ export async function DELETE(req: Request) {
       return new Response("Nedostaje firmaId.", { status: 400 });
     }
 
+    const radnici = await prisma.radnik.findMany({
+      where: { firmaId },
+    });
+
     await prisma.radnik.deleteMany({
       where: { firmaId },
+    });
+
+    await recordAuditLog({
+      user,
+      action: "delete",
+      entityType: "radnik",
+      entityLabel: `Obrisano radnika: ${radnici.length}`,
+      firmaId,
+      oldData: radnici,
     });
 
     return Response.json({ ok: true });

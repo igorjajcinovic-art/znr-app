@@ -1,4 +1,5 @@
 import { hashPassword } from "@/lib/auth";
+import { recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/server-auth";
 
@@ -70,6 +71,15 @@ export async function POST(req: Request) {
       role: true,
       createdAt: true,
     },
+  });
+
+  await recordAuditLog({
+    user: admin,
+    action: "create",
+    entityType: "korisnik",
+    entityId: korisnik.id,
+    entityLabel: korisnik.email,
+    newData: korisnik,
   });
 
   return Response.json(korisnik, { status: 201 });

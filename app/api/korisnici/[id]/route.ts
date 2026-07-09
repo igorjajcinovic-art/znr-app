@@ -1,4 +1,5 @@
 import { hashPassword } from "@/lib/auth";
+import { recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/server-auth";
 
@@ -64,6 +65,24 @@ export async function PUT(
       role: true,
       createdAt: true,
       updatedAt: true,
+    },
+  });
+
+  await recordAuditLog({
+    user: admin,
+    action: "update",
+    entityType: "korisnik",
+    entityId: korisnik.id,
+    entityLabel: korisnik.email,
+    oldData: {
+      id: postojeci.id,
+      email: postojeci.email,
+      ime: postojeci.ime,
+      role: postojeci.role,
+    },
+    newData: {
+      ...korisnik,
+      lozinkaPromijenjena: Boolean(lozinka),
     },
   });
 
