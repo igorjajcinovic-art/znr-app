@@ -115,15 +115,34 @@ function martinaCanAccess(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const method = req.method.toUpperCase();
 
-  if (pathname === "/korisnici") return false;
+  if (pathname === "/" || pathname === "/korisnici") return false;
 
   if (pathname.startsWith("/api")) {
     if (pathname.startsWith("/api/auth")) return true;
+    if (pathname === "/api/upozorenja/count") return method === "GET";
     if (pathname.startsWith("/api/korisnici")) return false;
-    return ["GET", "PUT", "PATCH"].includes(method);
+    if (pathname.startsWith("/api/tvrtke")) return method === "GET";
+    if (pathname.startsWith("/api/lijecnicki")) return method === "GET";
+    if (pathname.startsWith("/api/osposobljavanja")) return method === "GET";
+    if (pathname.startsWith("/api/ispis/ugovor-rad")) return method === "GET";
+    if (pathname.startsWith("/api/ispis/radnici")) return method === "GET";
+    if (pathname.startsWith("/api/radnici-dokumenti")) return method === "GET";
+    if (pathname === "/api/radnici") return ["GET", "POST"].includes(method);
+    if (pathname.startsWith("/api/radnici/")) {
+      return ["GET", "PUT", "PATCH"].includes(method);
+    }
+    return false;
   }
 
-  return true;
+  if (pathname === "/tvrtke") return true;
+  if (!pathname.startsWith("/tvrtke/")) return false;
+
+  const parts = pathname.split("/").filter(Boolean);
+  const moduleName = parts[2] || "";
+
+  if (!moduleName) return true;
+
+  return ["radnici", "ugovori"].includes(moduleName);
 }
 
 function poslovodaCompanyHome(pathname: string) {
@@ -165,6 +184,15 @@ export async function proxy(req: NextRequest) {
     if (firmaId) {
       return NextResponse.redirect(
         new URL(`/tvrtke/${firmaId}/radno-vrijeme`, req.url)
+      );
+    }
+  }
+
+  if (role === "martina") {
+    const firmaId = poslovodaCompanyHome(pathname);
+    if (firmaId) {
+      return NextResponse.redirect(
+        new URL(`/tvrtke/${firmaId}/radnici`, req.url)
       );
     }
   }

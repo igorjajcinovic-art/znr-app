@@ -149,7 +149,9 @@ export default function RadniciTvrtkePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isAdmin = korisnickaRole === "admin";
   const canEdit = isAdmin || korisnickaRole === "martina";
-  const canCreateDelete = isAdmin;
+  const canCreate = isAdmin || korisnickaRole === "martina";
+  const canDelete = isAdmin;
+  const canImport = isAdmin;
 
   useEffect(() => {
     if (!firmaId) return;
@@ -519,7 +521,7 @@ export default function RadniciTvrtkePage() {
 };
 
 const importCsv = async () => {
-  if (!canCreateDelete) {
+  if (!canImport) {
     setGreska("Nemate ovlast za uvoz radnika.");
     return;
   }
@@ -999,7 +1001,7 @@ const importCsv = async () => {
   };
 
   const obrisiRadnika = async (id: string) => {
-    if (!canCreateDelete) {
+    if (!canDelete) {
       setGreska("Nemate ovlast za brisanje radnika.");
       return;
     }
@@ -1133,15 +1135,15 @@ const importCsv = async () => {
           </div>
         </div>
 
-        {!canCreateDelete && (
+        {!canDelete && (
           <div style={infoBoxStyle}>
             {korisnickaRole === "martina"
-              ? "Prijavljeni ste kao Martina. Možete pregledavati i uređivati postojeće radnike, ali ne možete dodavati, uvoziti ni brisati zapise."
+              ? "Prijavljeni ste kao Martina. Možete pregledavati, dodavati i uređivati radnike, ali ne možete uvoziti CSV, dodavati dokumente ni brisati zapise."
               : "Prijavljeni ste kao poslovođa. Na ovoj stranici možete pregledavati radnike, filtere, detalje i upozorenja, dok su unos, uvoz, uređivanje i brisanje dostupni administratoru."}
           </div>
         )}
 
-        {canCreateDelete && (
+        {canImport && (
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>Uvoz radnika iz CSV-a</h2>
 
@@ -1338,7 +1340,7 @@ const importCsv = async () => {
           </div>
         </div>
 
-        {(canCreateDelete || editId) && (
+        {(canCreate || editId) && (
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>
             {editId ? "Uređenje radnika" : "Unos radnika"}
@@ -1627,7 +1629,7 @@ const importCsv = async () => {
     )}
   </div>
 
-  {canCreateDelete && (
+  {canDelete && (
   <button
     style={smallRedButtonStyle}
     onClick={async () => {
@@ -1731,7 +1733,7 @@ const importCsv = async () => {
                       </>
                     )}
 
-                    {canCreateDelete && (
+                    {canDelete && (
                       <>
                         <Link
                           href={`/tvrtke/${firmaId}/radnici/${r.id}#dokumenti-radnika`}
@@ -1831,7 +1833,7 @@ const importCsv = async () => {
                 </>
               )}
 
-              {canCreateDelete && (
+              {canDelete && (
                 <>
                   <Link
                     href={`/tvrtke/${firmaId}/radnici/${r.id}#dokumenti-radnika`}

@@ -183,11 +183,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
     "Upozorenja",
   ]);
 
+  const martinaLabels = new Set(["Tvrtke", "Radnici", "Ugovori"]);
+
   const prikazaniNavItems =
     role === "admin"
       ? navItems
       : role === "martina"
-      ? navItems.filter((item) => item.label !== "Korisnici")
+      ? navItems.filter((item) => martinaLabels.has(item.label))
       : navItems.filter((item) => poslovodaLabels.has(item.label));
 
   const SidebarContent = (
@@ -358,6 +360,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className="znr-topbar-right" style={topbarRightStyle}>
+            {role !== "martina" ? (
             <Link
               href={imaAktivnuFirmu ? `/tvrtke/${firmaId}/upozorenja` : "/tvrtke"}
               style={notificationWrapStyle}
@@ -370,6 +373,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 </div>
               ) : null}
             </Link>
+            ) : null}
 
             <div className="znr-topbar-avatar" style={avatarStyle}>
               AD

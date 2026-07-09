@@ -30,7 +30,10 @@ export default function LoginPage() {
       }
 
       const data = await res.json();
-      window.location.href = data?.user?.role === "poslovoda" ? "/tvrtke" : "/";
+      window.location.href =
+        data?.user?.role === "poslovoda" || data?.user?.role === "martina"
+          ? "/tvrtke"
+          : "/";
     } catch (err) {
       setGreska(err instanceof Error ? err.message : "Greška kod prijave.");
     } finally {
