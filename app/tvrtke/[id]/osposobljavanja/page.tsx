@@ -9,6 +9,8 @@ type Radnik = {
   firmaId: string;
   ime: string;
   oib: string;
+  aktivan?: boolean;
+  datumOdjave?: string | null;
 };
 
 type Osposobljavanje = {
@@ -178,12 +180,13 @@ export default function OsposobljavanjaPage() {
       "Vrsta osposobljavanja",
       "Datum osposobljavanja",
       "Vrijedi do",
-      "Status",
+      "Status radnika",
+      "Status osposobljavanja",
       "Napomena",
     ];
 
     const rows = filtriranaOsposobljavanja.map((z) => {
-      const radnik = radnici.find((r) => r.oib === z.oib);
+      const radnik = radniciPoOib.get(z.oib);
 
       return [
         radnik?.ime || "",
@@ -191,6 +194,7 @@ export default function OsposobljavanjaPage() {
         z.vrsta,
         formatDate(z.datum),
         formatDate(z.vrijediDo),
+        statusRadnikaText(radnik),
         statusRoka(z.vrijediDo).text,
         z.napomena || "",
       ];
@@ -402,6 +406,64 @@ export default function OsposobljavanjaPage() {
     };
   };
 
+  const radniciPoOib = useMemo(() => {
+    const mapa = new Map<string, Radnik>();
+
+    radnici.forEach((radnik) => {
+      const postojeci = mapa.get(radnik.oib);
+
+      if (!postojeci || (!postojeci.aktivan && radnik.aktivan)) {
+        mapa.set(radnik.oib, radnik);
+      }
+    });
+
+    return mapa;
+  }, [radnici]);
+
+  const radniciZaOdabir = useMemo(() => {
+    return [...radnici].sort((a, b) => {
+      if (Boolean(a.aktivan) !== Boolean(b.aktivan)) {
+        return a.aktivan ? -1 : 1;
+      }
+
+      return a.ime.localeCompare(b.ime, "hr");
+    });
+  }, [radnici]);
+
+  const odabraniRadnik = useMemo(() => {
+    if (!forma.oib) return null;
+    return radniciPoOib.get(forma.oib) || null;
+  }, [forma.oib, radniciPoOib]);
+
+  const statusRadnikaText = (radnik?: Radnik | null) => {
+    if (!radnik) return "Radnik nije na popisu";
+    return radnik.aktivan ? "Aktivan radnik" : "Neaktivan radnik";
+  };
+
+  const statusRadnikaStyle = (radnik?: Radnik | null): React.CSSProperties => {
+    if (!radnik) {
+      return {
+        background: "#f3f4f6",
+        color: "#374151",
+        border: "1px solid #d1d5db",
+      };
+    }
+
+    if (radnik.aktivan) {
+      return {
+        background: "#dcfce7",
+        color: "#166534",
+        border: "1px solid #4ade80",
+      };
+    }
+
+    return {
+      background: "#fef3c7",
+      color: "#92400e",
+      border: "1px solid #fbbf24",
+    };
+  };
+
   const upozorenja = useMemo(() => {
     return zapisi.filter((z) => {
       const level = statusRoka(z.vrijediDo).level;
@@ -411,7 +473,7 @@ export default function OsposobljavanjaPage() {
 
   const filtriranaOsposobljavanja = useMemo(() => {
     return zapisi.filter((z) => {
-      const radnik = radnici.find((r) => r.oib === z.oib);
+      const radnik = radniciPoOib.get(z.oib);
       const status = statusRoka(z.vrijediDo).level;
 
       const okRadnik =
@@ -432,7 +494,7 @@ export default function OsposobljavanjaPage() {
 
       return okRadnik && okOib && okVrsta && okStatus;
     });
-  }, [zapisi, radnici, filterRadnik, filterOib, filterVrsta, filterStatus]);
+  }, [zapisi, radniciPoOib, filterRadnik, filterOib, filterVrsta, filterStatus]);
 
   const brojUpozorenja = useMemo(() => upozorenja.length, [upozorenja]);
 
@@ -655,7 +717,7 @@ export default function OsposobljavanjaPage() {
           ) : (
             <div style={warningListStyle}>
               {upozorenja.map((z) => {
-                const radnik = radnici.find((r) => r.oib === z.oib);
+                const radnik = radniciPoOib.get(z.oib);
                 const status = statusRoka(z.vrijediDo);
 
                 return (
@@ -754,12 +816,24 @@ export default function OsposobljavanjaPage() {
                 onChange={(e) => setForma({ ...forma, oib: e.target.value })}
               >
                 <option value="">Odaberi radnika</option>
-                {radnici.map((r) => (
+                {radniciZaOdabir.map((r) => (
                   <option key={r.id} value={r.oib}>
-                    {r.ime} ({r.oib})
+                    {r.ime} ({r.oib}) - {r.aktivan ? "aktivan" : "neaktivan"}
                   </option>
                 ))}
               </select>
+              {forma.oib && (
+                <div style={selectedWorkerStatusStyle}>
+                  <span
+                    style={{
+                      ...pillStyle,
+                      ...statusRadnikaStyle(odabraniRadnik),
+                    }}
+                  >
+                    {statusRadnikaText(odabraniRadnik)}
+                  </span>
+                </div>
+              )}
             </Field>
 
             <Field label="Vrsta osposobljavanja">
@@ -850,6 +924,7 @@ export default function OsposobljavanjaPage() {
                   <th style={thStyle}>Vrsta</th>
                   <th style={thStyle}>Datum</th>
                   <th style={thStyle}>Vrijedi do</th>
+                  <th style={thStyle}>Status radnika</th>
                   <th style={thStyle}>Status</th>
                   <th style={thStyle}>Napomena</th>
                   <th style={thStyle}>Akcije</th>
@@ -858,13 +933,13 @@ export default function OsposobljavanjaPage() {
               <tbody>
                 {filtriranaOsposobljavanja.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={tdCenterStyle}>
+                    <td colSpan={9} style={tdCenterStyle}>
                       Nema osposobljavanja za prikaz.
                     </td>
                   </tr>
                 ) : (
                   filtriranaOsposobljavanja.map((z) => {
-                    const radnik = radnici.find((r) => r.oib === z.oib);
+                    const radnik = radniciPoOib.get(z.oib);
                     const status = statusRoka(z.vrijediDo);
 
                     return (
@@ -878,6 +953,16 @@ export default function OsposobljavanjaPage() {
                         <td style={tdStyle}>{z.vrsta}</td>
                         <td style={tdStyle}>{formatDate(z.datum)}</td>
                         <td style={tdStyle}>{formatDate(z.vrijediDo)}</td>
+                        <td style={tdStyle}>
+                          <span
+                            style={{
+                              ...pillStyle,
+                              ...statusRadnikaStyle(radnik),
+                            }}
+                          >
+                            {statusRadnikaText(radnik)}
+                          </span>
+                        </td>
                         <td style={tdStyle}>
                           <span
                             style={{
@@ -933,7 +1018,7 @@ export default function OsposobljavanjaPage() {
                 <div>
                   <h2 style={modalTitleStyle}>Detalji osposobljavanja</h2>
                   <div style={modalSubtitleStyle}>
-                    {radnici.find((r) => r.oib === detalji.oib)?.ime || detalji.oib}
+                    {radniciPoOib.get(detalji.oib)?.ime || detalji.oib}
                   </div>
                 </div>
                 <button
@@ -947,9 +1032,13 @@ export default function OsposobljavanjaPage() {
               <div style={detailSectionStyle}>
                 <Detalj
                   red="Ime i prezime"
-                  value={radnici.find((r) => r.oib === detalji.oib)?.ime || "-"}
+                  value={radniciPoOib.get(detalji.oib)?.ime || "-"}
                 />
                 <Detalj red="OIB" value={detalji.oib} />
+                <Detalj
+                  red="Status radnika"
+                  value={statusRadnikaText(radniciPoOib.get(detalji.oib))}
+                />
                 <Detalj red="Vrsta" value={detalji.vrsta} />
                 <Detalj
                   red="Datum osposobljavanja"
@@ -1276,6 +1365,10 @@ const errorBoxStyle: React.CSSProperties = {
   background: "#fee2e2",
   color: "#991b1b",
   border: "1px solid #f87171",
+};
+
+const selectedWorkerStatusStyle: React.CSSProperties = {
+  marginTop: 8,
 };
 
 const pillStyle: React.CSSProperties = {
