@@ -26,6 +26,43 @@ function statusStyle(status: DeadlineStatus) {
   return { ...pillStyle, ...mutedPillStyle };
 }
 
+function formatRadniStaz(start: Date | string | null, end?: Date | string | null) {
+  if (!start) return "-";
+
+  const startDate = new Date(start);
+  const endDate = end ? new Date(end) : new Date();
+
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return "-";
+  }
+
+  const pocetak = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const kraj = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+
+  if (kraj < pocetak) return "-";
+
+  let godine = kraj.getFullYear() - pocetak.getFullYear();
+  let mjeseci = kraj.getMonth() - pocetak.getMonth();
+  let dani = kraj.getDate() - pocetak.getDate();
+
+  if (dani < 0) {
+    mjeseci -= 1;
+    dani += new Date(kraj.getFullYear(), kraj.getMonth(), 0).getDate();
+  }
+
+  if (mjeseci < 0) {
+    godine -= 1;
+    mjeseci += 12;
+  }
+
+  const dijelovi = [];
+  if (godine > 0) dijelovi.push(godine + " " + (godine === 1 ? "godina" : "godina"));
+  if (mjeseci > 0) dijelovi.push(mjeseci + " " + (mjeseci === 1 ? "mjesec" : "mjeseci"));
+  if (dani > 0 || dijelovi.length === 0) dijelovi.push(dani + " " + (dani === 1 ? "dan" : "dana"));
+
+  return dijelovi.join(", ");
+}
+
 export default async function RadnikDetaljPage({ params }: PageProps) {
   const { id: firmaId, radnikId } = await params;
   await ensureRadnikUlicaColumn();
@@ -88,6 +125,10 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
     : uskoro > 0
     ? "warning"
     : "ok";
+  const radniStazKodPoslodavca = formatRadniStaz(
+    radnik.datumZaposlenja,
+    radnik.aktivan ? null : radnik.datumOdjave
+  );
 
   return (
     <div style={pageStyle}>
@@ -143,6 +184,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
             <Detail label="Tvrtka" value={tvrtka.naziv} />
             <Detail label="Status" value={radnik.aktivan ? "Aktivan" : "Neaktivan"} />
             <Detail label="Datum zaposlenja" value={formatHrDate(radnik.datumZaposlenja)} />
+            <Detail label="Radni staž kod poslodavca" value={radniStazKodPoslodavca} />
             <Detail label="Datum odjave" value={formatHrDate(radnik.datumOdjave)} />
             <Detail label="Datum rođenja" value={formatHrDate(radnik.datumRodjenja)} />
             <Detail label="Grad / mjesto" value={radnik.grad || "-"} />
