@@ -13,12 +13,18 @@ export async function ensureUserTable() {
     );
   `);
 
-  await prisma.$executeRawUnsafe(`
-    CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");
-  `);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "email" TEXT;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "ime" TEXT;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "lozinkaHash" TEXT;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "role" TEXT DEFAULT 'admin';`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP;`);
 
-  await prisma.$executeRawUnsafe(`
-    ALTER TABLE "User"
-    ADD COLUMN IF NOT EXISTS "role" TEXT NOT NULL DEFAULT 'admin';
-  `);
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");
+    `);
+  } catch (error) {
+    console.warn("User email index could not be ensured:", error);
+  }
 }

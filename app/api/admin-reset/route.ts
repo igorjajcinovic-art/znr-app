@@ -1,9 +1,16 @@
+import { randomUUID } from "crypto";
 import { hashPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureUserTable } from "@/lib/users";
 
 const RESET_KEY = "znr-reset-2026-08-17-privremeno";
 const TEMP_PASSWORD = "123456";
+const DEFAULT_ADMIN_EMAIL = "admin@test.hr";
+
+type ResetUser = {
+  id: string;
+  email: string | null;
+};
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -17,41 +24,59 @@ export async function GET(req: Request) {
     await ensureUserTable();
 
     const lozinkaHash = hashPassword(TEMP_PASSWORD);
-    let user = await prisma.user.findFirst({
-      where: { role: "admin" },
-      orderBy: { createdAt: "asc" },
-    });
+    let rows = await prisma.$queryRaw<ResetUser[]>`
+      SELECT "id", "email"
+      FROM "User"
+      WHERE "role" = 'admin'
+      ORDER BY "createdAt" ASC
+      LIMIT 1
+    `;
 
-    if (!user) {
-      user = await prisma.user.findFirst({ orderBy: { createdAt: "asc" } });
+    if (rows.length === 0) {
+      rows = await prisma.$queryRaw<ResetUser[]>`
+        SELECT "id", "email"
+        FROM "User"
+        ORDER BY "createdAt" ASC
+        LIMIT 1
+      `;
     }
 
-    if (user) {
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          lozinkaHash,
-          role: "admin",
-        },
-      });
-    } else {
-      user = await prisma.user.create({
-        data: {
-          email: "admin@test.hr",
-          ime: "Admin",
-          lozinkaHash,
-          role: "admin",
-        },
+    if (rows.length > 0) {
+      const user = rows[0];
+      const email = user.email || DEFAULT_ADMIN_EMAIL;
+
+      await prisma.$executeRaw`
+        UPDATE "User"
+        SET
+          "email" = ${email},
+          "ime" = COALESCE("ime", 'Admin'),
+          "lozinkaHash" = ${lozinkaHash},
+          "role" = 'admin',
+          "updatedAt" = CURRENT_TIMESTAMP
+        WHERE "id" = ${user.id}
+      `;
+
+      return Response.json({
+        ok: true,
+        email,
+        privremenaLozinka: TEMP_PASSWORD,
       });
     }
+
+    const id = randomUUID();
+    await prisma.$executeRaw`
+      INSERT INTO "User" ("id", "email", "ime", "lozinkaHash", "role", "createdAt", "updatedAt")
+      VALUES (${id}, ${DEFAULT_ADMIN_EMAIL}, 'Admin', ${lozinkaHash}, 'admin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `;
 
     return Response.json({
       ok: true,
-      email: user.email,
+      email: DEFAULT_ADMIN_EMAIL,
       privremenaLozinka: TEMP_PASSWORD,
     });
   } catch (error) {
     console.error("GET /api/admin-reset error:", error);
-    return new Response("Reset nije uspio.", { status: 500 });
+    const message = error instanceof Error ? error.message : "Nepoznata greška";
+    return Response.json({ ok: false, error: message }, { status: 500 });
   }
 }
