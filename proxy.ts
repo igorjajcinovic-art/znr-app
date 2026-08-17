@@ -155,13 +155,14 @@ export async function proxy(req: NextRequest) {
 
   const isLogin = pathname.startsWith("/login");
   const isAuthApi = pathname.startsWith("/api/auth");
+  const isAdminResetApi = pathname.startsWith("/api/admin-reset");
   const isNextAsset = pathname.startsWith("/_next");
   const isPublicFile =
     pathname.startsWith("/favicon.ico") ||
     pathname.startsWith("/logo") ||
     pathname.startsWith("/uploads");
 
-  if (isLogin || isAuthApi || isNextAsset || isPublicFile) {
+  if (isLogin || isAuthApi || isAdminResetApi || isNextAsset || isPublicFile) {
     return NextResponse.next();
   }
 
