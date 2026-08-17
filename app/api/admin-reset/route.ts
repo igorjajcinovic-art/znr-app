@@ -6,7 +6,7 @@ import { ensureUserTable } from "@/lib/users";
 const RESET_KEY = "znr-reset-2026-08-17-privremeno";
 const TEMP_PASSWORD = "123456";
 const DEFAULT_ADMIN_EMAIL = "admin@test.hr";
-const RESET_VERSION = "reset-v4-2026-08-17";
+const RESET_VERSION = "reset-v5-2026-08-17";
 
 type ResetUser = {
   id: string;
@@ -83,3 +83,4 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, resetVersion: RESET_VERSION, error: message }, { status: 500 });
   }
 }
+
