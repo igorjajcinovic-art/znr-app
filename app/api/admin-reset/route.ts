@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+﻿import { randomUUID } from "crypto";
 import { hashPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureUserTable } from "@/lib/users";
@@ -6,7 +6,7 @@ import { ensureUserTable } from "@/lib/users";
 const RESET_KEY = "znr-reset-2026-08-17-privremeno";
 const TEMP_PASSWORD = "123456";
 const DEFAULT_ADMIN_EMAIL = "admin@test.hr";
-const RESET_VERSION = "reset-v3-2026-08-17";
+const RESET_VERSION = "reset-v4-2026-08-17";
 
 type ResetUser = {
   id: string;
@@ -79,7 +79,7 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("GET /api/admin-reset error:", error);
-    const message = error instanceof Error ? error.message : "Nepoznata greška";
+    const message = error instanceof Error ? error.message : "Nepoznata greÅ¡ka";
     return Response.json({ ok: false, resetVersion: RESET_VERSION, error: message }, { status: 500 });
   }
 }
