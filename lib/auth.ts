@@ -21,11 +21,12 @@ export function verifyPassword(password: string, stored: string) {
   if (!salt || !originalHash) return false;
 
   const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  const original = Buffer.from(originalHash, "hex");
+  const current = Buffer.from(hash, "hex");
 
-  return crypto.timingSafeEqual(
-    Buffer.from(originalHash, "hex"),
-    Buffer.from(hash, "hex")
-  );
+  if (original.length !== current.length) return false;
+
+  return crypto.timingSafeEqual(original, current);
 }
 
 export function createToken(payload: { userId: string; email: string; role?: string }) {

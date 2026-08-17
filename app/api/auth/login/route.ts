@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { ensureUserTable } from "@/lib/users";
 import {
   createToken,
   hashPassword,
@@ -8,6 +9,8 @@ import {
 
 export async function POST(req: Request) {
   try {
+    await ensureUserTable();
+
     const body = await req.json();
 
     const email = String(body?.email ?? "").trim().toLowerCase();

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { ensureUserTable } from "@/lib/users";
 import { verifyToken } from "@/lib/auth";
 
 function cookieValue(req: Request, name: string) {
@@ -14,6 +15,8 @@ export async function getCurrentUser(req: Request) {
   const payload = token ? verifyToken(token) : null;
 
   if (!payload) return null;
+
+  await ensureUserTable();
 
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
