@@ -38,15 +38,25 @@ function rowsFor(data: BackupData, keyName: string) {
 }
 
 async function postRows(table: string, rows: unknown[], addLog: (text: string) => void) {
-  const batchSize = table === "RadnaOpremaDokument" || table === "RadnikDokument" ? 1 : table === "Radnik" ? 100 : 150;
+  const isDocumentTable = table === "RadnaOpremaDokument" || table === "RadnikDokument";
+  const batchSize = isDocumentTable ? 1 : table === "Radnik" ? 100 : 150;
   let imported = 0;
+  let skipped = 0;
 
   for (let i = 0; i < rows.length; i += batchSize) {
     const batch = rows.slice(i, i + batchSize);
+    const body = JSON.stringify({ key: IMPORT_KEY, table, rows: batch });
+
+    if (isDocumentTable && body.length > 700_000) {
+      skipped += batch.length;
+      addLog(`${table}: preskoceno ${skipped}, uvezeno ${imported}/${rows.length}`);
+      continue;
+    }
+
     const res = await fetch("/api/backup/import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key: IMPORT_KEY, table, rows: batch }),
+      body,
     });
 
     const text = await res.text();
@@ -61,6 +71,10 @@ async function postRows(table: string, rows: unknown[], addLog: (text: string) =
 
     imported += parsed.imported || 0;
     addLog(`${table}: ${imported}/${rows.length}`);
+  }
+
+  if (skipped > 0) {
+    addLog(`${table}: preskoceno prevelikih dokumenata ${skipped}`);
   }
 
   return imported;
@@ -257,4 +271,5 @@ const errorStyle: React.CSSProperties = {
   color: "#b91c1c",
   fontWeight: 900,
 };
+
 
