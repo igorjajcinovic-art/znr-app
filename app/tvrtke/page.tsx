@@ -255,16 +255,19 @@ export default function TvrtkePage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={preuzmiBackupSve}
-            disabled={backupingId !== null}
-            style={primaryButtonStyle}
-          >
-            {backupingId === "__all__"
-              ? "Pripremam backup..."
-              : "Backup svih podataka"}
-          </button>
+          <div style={heroRightStyle}>
+            <WeatherWidget compact />
+            <button
+              type="button"
+              onClick={preuzmiBackupSve}
+              disabled={backupingId !== null}
+              style={primaryButtonStyle}
+            >
+              {backupingId === "__all__"
+                ? "Pripremam backup..."
+                : "Backup svih podataka"}
+            </button>
+          </div>
         </div>
 
         <div style={cardStyle}>
@@ -332,10 +335,6 @@ export default function TvrtkePage() {
               {saving ? "Spremanje..." : "Dodaj tvrtku"}
             </button>
           </div>
-        </div>
-
-        <div style={weatherWrapStyle}>
-          <WeatherWidget />
         </div>
 
         <div style={cardStyle}>
@@ -549,8 +548,10 @@ const cardStyle: React.CSSProperties = {
 };
 
 
-const weatherWrapStyle: React.CSSProperties = {
-  marginBottom: 24,
+const heroRightStyle: React.CSSProperties = {
+  display: "grid",
+  justifyItems: "end",
+  gap: 12,
 };
 const sectionTopStyle: React.CSSProperties = {
   display: "flex",

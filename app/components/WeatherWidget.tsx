@@ -44,7 +44,7 @@ function weatherSymbol(code: number | null) {
   return "SKY";
 }
 
-export default function WeatherWidget() {
+export default function WeatherWidget({ compact = false }: { compact?: boolean }) {
   const [weather, setWeather] = useState<WeatherState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -106,6 +106,35 @@ export default function WeatherWidget() {
     () => opisVremena(weather?.code ?? null),
     [weather?.code]
   );
+
+  const today = useMemo(
+    () =>
+      new Intl.DateTimeFormat("hr-HR", {
+        weekday: "short",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(new Date()),
+    []
+  );
+
+  if (compact) {
+    return (
+      <div style={compactCardStyle} title="Vremenska prognoza za Glinu">
+        <div style={compactDateStyle}>{today}</div>
+        {loading ? (
+          <div style={compactWeatherStyle}>Vrijeme...</div>
+        ) : error || !weather ? (
+          <div style={compactWeatherStyle}>Prognoza nedostupna</div>
+        ) : (
+          <div style={compactWeatherStyle}>
+            <strong>{Math.round(weather.temp)} C</strong>
+            <span>{description}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div style={cardStyle}>
@@ -206,4 +235,28 @@ const emptyStyle: React.CSSProperties = {
   background: "#f8fafc",
   color: "#64748b",
   fontWeight: 700,
+};
+const compactCardStyle: React.CSSProperties = {
+  display: "grid",
+  justifyItems: "end",
+  gap: 4,
+  color: "#334155",
+  fontSize: 12,
+  lineHeight: 1.2,
+};
+
+const compactDateStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontWeight: 800,
+  textTransform: "uppercase",
+};
+
+const compactWeatherStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 7,
+  alignItems: "center",
+  justifyContent: "flex-end",
+  color: "#0f172a",
+  fontWeight: 700,
+  whiteSpace: "nowrap",
 };
