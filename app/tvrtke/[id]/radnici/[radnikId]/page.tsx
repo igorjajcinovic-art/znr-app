@@ -134,7 +134,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
     <div style={pageStyle}>
       <div style={topNavStyle}>
         <Link href={`/tvrtke/${firmaId}/radnici`} style={backLinkStyle}>
-          ← Natrag na sve radnike
+          â† Natrag na sve radnike
         </Link>
         <Link href={`/tvrtke/${firmaId}`} style={plainLinkStyle}>
           {tvrtka.naziv}
@@ -148,7 +148,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
           <div style={eyebrowStyle}>Profil radnika</div>
           <h1 style={titleStyle}>{radnik.ime}</h1>
           <div style={subtitleStyle}>
-            {radnik.radnoMjesto || "Radno mjesto nije upisano"} · OIB {radnik.oib}
+            {radnik.radnoMjesto || "Radno mjesto nije upisano"} Â· OIB {radnik.oib}
           </div>
         </div>
 
@@ -171,9 +171,9 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
       </section>
 
       <section style={statsGridStyle}>
-        <Metric label="Liječnički" value={lijecnicki.length} />
+        <Metric label="LijeÄniÄki" value={lijecnicki.length} />
         <Metric label="Osposobljavanja" value={osposobljavanja.length} />
-        <Metric label="OZO zaduženja" value={ozo.length} />
+        <Metric label="OZO arhiva" value={ozo.length} />
         <Metric label="Upozorenja" value={kriticno + uskoro} tone={kriticno > 0 ? "danger" : uskoro > 0 ? "warning" : "ok"} />
       </section>
 
@@ -184,11 +184,11 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
             <Detail label="Tvrtka" value={tvrtka.naziv} />
             <Detail label="Status" value={radnik.aktivan ? "Aktivan" : "Neaktivan"} />
             <Detail label="Datum zaposlenja" value={formatHrDate(radnik.datumZaposlenja)} />
-            <Detail label="Radni staž kod poslodavca" value={radniStazKodPoslodavca} />
+            <Detail label="Radni staÅ¾ kod poslodavca" value={radniStazKodPoslodavca} />
             <Detail label="Datum odjave" value={formatHrDate(radnik.datumOdjave)} />
-            <Detail label="Datum rođenja" value={formatHrDate(radnik.datumRodjenja)} />
+            <Detail label="Datum roÄ‘enja" value={formatHrDate(radnik.datumRodjenja)} />
             <Detail label="Grad / mjesto" value={radnik.grad || "-"} />
-            <Detail label="Ulica i kućni broj" value={adresaRows[0]?.ulica || "-"} />
+            <Detail label="Ulica i kuÄ‡ni broj" value={adresaRows[0]?.ulica || "-"} />
             <Detail label="Radno mjesto" value={radnik.radnoMjesto || "-"} />
             <Detail label="OIB" value={radnik.oib} />
           </div>
@@ -199,7 +199,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
           <div style={timelineStyle}>
             <TimelineItem
               title="Radna dozvola"
-              detail={radnik.imaDozvolu ? deadlineText(radnik.dozvolaDo) : "Nije označeno da ima dozvolu"}
+              detail={radnik.imaDozvolu ? deadlineText(radnik.dozvolaDo) : "Nije oznaÄeno da ima dozvolu"}
               date={formatHrDate(radnik.dozvolaDo)}
               status={radnik.imaDozvolu ? deadlineStatus(radnik.dozvolaDo) : "muted"}
             />
@@ -223,8 +223,8 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
 
       <section style={recordsGridStyle}>
         <RecordPanel
-          title="Liječnički pregledi"
-          empty="Nema liječničkih pregleda."
+          title="LijeÄniÄki pregledi"
+          empty="Nema lijeÄniÄkih pregleda."
         >
           {lijecnicki.map((item) => (
             <RecordRow
@@ -254,12 +254,12 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
           ))}
         </RecordPanel>
 
-        <RecordPanel title="Arhiva zaduženja OZO opreme" empty="Nema zadužene OZO opreme.">
+        <RecordPanel title="Arhiva zaduzenja OZO opreme" empty="Nema zaduzene OZO opreme.">
           {ozo.map((item) => (
             <RecordRow
               key={item.id}
               title={item.vrsta}
-              meta={`Izdano: ${formatHrDate(item.datumIzdavanja)} · Status: ${item.status === "razduzeno" ? "Razduženo" : "Aktivno"} · Količina: ${item.kolicina}${item.napomena ? ` · ${item.napomena}` : ""}`}
+              meta={`Izdano: ${formatHrDate(item.datumIzdavanja)} - Status: ${item.status === "razduzeno" ? "Razduzeno" : "Aktivno"} - Kolicina: ${item.kolicina}${item.napomena ? ` - ${item.napomena}` : ""}`}
               dateLabel="Rok zamjene"
               date={item.rokZamjene}
               status={deadlineStatus(item.rokZamjene)}
@@ -267,12 +267,6 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
           ))}
         </RecordPanel>
 
-        <RecordPanel
-          title="Arhiva zaduženja radne opreme"
-          empty="Radna oprema/strojevi još nisu vezani uz pojedinog radnika."
-        >
-          {null}
-        </RecordPanel>
       </section>
     </div>
   );

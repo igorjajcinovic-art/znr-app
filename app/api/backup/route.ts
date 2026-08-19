@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureTvrtkaDirektorColumn, type TvrtkaRecord } from "@/lib/companies";
 import { ensureVatrogasniAparatiTable } from "@/lib/fire-extinguishers";
 import { ensureRadnikDokumentiTable } from "@/lib/worker-documents";
+import { ensureTvrtkaDokumentiTable } from "@/lib/company-documents";
 import { ensureRadnikUlicaColumn } from "@/lib/workers";
 
 type RawRow = Record<string, unknown>;
@@ -24,6 +25,7 @@ export async function GET(req: Request) {
     await ensureRadnikUlicaColumn();
     await ensureTvrtkaDirektorColumn();
     await ensureRadnikDokumentiTable();
+    await ensureTvrtkaDokumentiTable();
     await ensureVatrogasniAparatiTable();
 
     const { searchParams } = new URL(req.url);
@@ -38,7 +40,7 @@ export async function GET(req: Request) {
       const tvrtka = tvrtke[0];
 
       if (!tvrtka) {
-        return new Response("Tvrtka nije pronađena.", { status: 404 });
+        return new Response("Tvrtka nije pronaÃ„â€˜ena.", { status: 404 });
       }
 
       const [
@@ -49,6 +51,7 @@ export async function GET(req: Request) {
         radnaOprema,
         planer,
         radnikDokumenti,
+        tvrtkaDokumenti,
         vatrogasniAparati,
         vatrogasniPregledi,
       ] = await Promise.all([
@@ -79,6 +82,11 @@ export async function GET(req: Request) {
         }),
         prisma.$queryRaw<Array<RawRow>>`
           SELECT * FROM "RadnikDokument"
+          WHERE "firmaId" = ${firmaId}
+          ORDER BY "createdAt" DESC
+        `,
+        prisma.$queryRaw<Array<RawRow>>`
+          SELECT * FROM "TvrtkaDokument"
           WHERE "firmaId" = ${firmaId}
           ORDER BY "createdAt" DESC
         `,
@@ -121,6 +129,7 @@ export async function GET(req: Request) {
           radnaOpremaDokumenti: radnaOpremaDokumenti.length,
           planer: planer.length,
           radnikDokumenti: radnikDokumenti.length,
+          tvrtkaDokumenti: tvrtkaDokumenti.length,
           vatrogasniAparati: vatrogasniAparati.length,
           vatrogasniPregledi: vatrogasniPregledi.length,
         },
@@ -134,6 +143,7 @@ export async function GET(req: Request) {
           radnaOpremaDokumenti,
           planer,
           radnikDokumenti,
+          tvrtkaDokumenti,
           vatrogasniAparati,
           vatrogasniPregledi,
         },
@@ -161,6 +171,7 @@ export async function GET(req: Request) {
       radnaOpremaDokumenti,
       planer,
       radnikDokumenti,
+      tvrtkaDokumenti,
       vatrogasniAparati,
       vatrogasniPregledi,
       users,
@@ -186,6 +197,10 @@ export async function GET(req: Request) {
       prisma.$queryRaw<Array<RawRow>>`
         SELECT * FROM "RadnikDokument"
         ORDER BY "createdAt" DESC
+      `,
+      prisma.$queryRaw<Array<RawRow>>`
+        SELECT * FROM "TvrtkaDokument"
+        ORDER BY "firmaId" ASC, "createdAt" DESC
       `,
       prisma.$queryRaw<Array<RawRow>>`
         SELECT * FROM "VatrogasniAparat"
@@ -221,6 +236,7 @@ export async function GET(req: Request) {
         radnaOpremaDokumenti: radnaOpremaDokumenti.length,
         planer: planer.length,
         radnikDokumenti: radnikDokumenti.length,
+        tvrtkaDokumenti: tvrtkaDokumenti.length,
         vatrogasniAparati: vatrogasniAparati.length,
         vatrogasniPregledi: vatrogasniPregledi.length,
         users: users.length,
@@ -235,6 +251,7 @@ export async function GET(req: Request) {
         radnaOpremaDokumenti,
         planer,
         radnikDokumenti,
+        tvrtkaDokumenti,
         vatrogasniAparati,
         vatrogasniPregledi,
         users,

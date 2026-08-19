@@ -102,7 +102,7 @@ export default function UpozorenjaTvrtkePage() {
   const [ozo, setOzo] = useState<OzoOprema[]>([]);
   const [radnaOprema, setRadnaOprema] = useState<RadnaOprema[]>([]);
 
-  const [filter, setFilter] = useState<"sve" | "kasni" | "7" | "30">("sve");
+  const [filter, setFilter] = useState<"sve" | "hitno" | "uskoro" | "info" | "kasni" | "7" | "30">("sve");
   const [loading, setLoading] = useState(true);
   const [greska, setGreska] = useState("");
 
@@ -146,15 +146,15 @@ export default function UpozorenjaTvrtkePage() {
         }),
       ]);
 
-      if (!tvrtkeRes.ok) throw new Error("Ne mogu učitati tvrtke.");
-      if (!radniciRes.ok) throw new Error("Ne mogu učitati radnike.");
-      if (!planerRes.ok) throw new Error("Ne mogu učitati planer.");
-      if (!lijecnickiRes.ok) throw new Error("Ne mogu učitati liječničke.");
+      if (!tvrtkeRes.ok) throw new Error("Ne mogu uÄitati tvrtke.");
+      if (!radniciRes.ok) throw new Error("Ne mogu uÄitati radnike.");
+      if (!planerRes.ok) throw new Error("Ne mogu uÄitati planer.");
+      if (!lijecnickiRes.ok) throw new Error("Ne mogu uÄitati lijeÄniÄke.");
       if (!osposobljavanjaRes.ok) {
-        throw new Error("Ne mogu učitati osposobljavanja.");
+        throw new Error("Ne mogu uÄitati osposobljavanja.");
       }
-      if (!ozoRes.ok) throw new Error("Ne mogu učitati OZO.");
-      if (!radnaOpremaRes.ok) throw new Error("Ne mogu učitati radnu opremu.");
+      if (!ozoRes.ok) throw new Error("Ne mogu uÄitati OZO.");
+      if (!radnaOpremaRes.ok) throw new Error("Ne mogu uÄitati radnu opremu.");
 
       const sveTvrtke: Tvrtka[] = await tvrtkeRes.json();
       const radniciData: Radnik[] = await radniciRes.json();
@@ -166,7 +166,7 @@ export default function UpozorenjaTvrtkePage() {
       const radnaOpremaData: RadnaOprema[] = await radnaOpremaRes.json();
 
       const nadenaTvrtka = sveTvrtke.find((t) => t.id === firmaId) || null;
-      if (!nadenaTvrtka) throw new Error("Tvrtka nije pronađena.");
+      if (!nadenaTvrtka) throw new Error("Tvrtka nije pronaÄ‘ena.");
 
       setTvrtka(nadenaTvrtka);
       setRadnici(radniciData);
@@ -176,7 +176,7 @@ export default function UpozorenjaTvrtkePage() {
       setOzo(ozoData);
       setRadnaOprema(radnaOpremaData);
     } catch (err) {
-      setGreska(err instanceof Error ? err.message : "Greška pri učitavanju.");
+      setGreska(err instanceof Error ? err.message : "GreÅ¡ka pri uÄitavanju.");
     } finally {
       setLoading(false);
     }
@@ -320,9 +320,9 @@ const nazivRadnikaPoOib = (oib: string) => {
 
   result.push({
         id: `lijecnicki-${item.id}`,
-        grupa: "Liječnički",
+        grupa: "LijeÄniÄki",
         naslov: nazivRadnikaPoOib(item.oib),
-        opis: item.vrsta || item.napomena || "Liječnički pregled",
+        opis: item.vrsta || item.napomena || "LijeÄniÄki pregled",
         datum: item.vrijediDo,
         diff,
         status: statusIzDiffa(diff),
@@ -354,7 +354,7 @@ const nazivRadnikaPoOib = (oib: string) => {
         id: `ozo-${item.id}`,
         grupa: "OZO",
         naslov: nazivRadnikaPoOib(item.oib),
-        opis: `${item.vrsta} · količina: ${item.kolicina}`,
+        opis: `${item.vrsta} Â· koliÄina: ${item.kolicina}`,
         datum: item.rokZamjene,
         diff,
         status: statusIzDiffa(diff),
@@ -372,7 +372,7 @@ const nazivRadnikaPoOib = (oib: string) => {
         id: `stroj-${item.id}`,
         grupa: "Stroj / radna oprema",
         naslov: item.naziv,
-        opis: broj ? `${item.tip} · ${broj}` : item.tip,
+        opis: broj ? `${item.tip} Â· ${broj}` : item.tip,
         datum: item.sljedeciServis,
         diff,
         status: statusIzDiffa(diff),
@@ -389,6 +389,18 @@ const nazivRadnikaPoOib = (oib: string) => {
   }, [planer, lijecnicki, osposobljavanja, ozo, radnaOprema, radnici, firmaId]);
 
   const filtriranaUpozorenja = useMemo(() => {
+    if (filter === "hitno") {
+      return svaUpozorenja.filter((u) => u.diff !== null && u.diff <= 0);
+    }
+
+    if (filter === "uskoro") {
+      return svaUpozorenja.filter((u) => u.diff !== null && u.diff > 0 && u.diff <= 30);
+    }
+
+    if (filter === "info") {
+      return svaUpozorenja.filter((u) => u.diff === null || u.diff > 30);
+    }
+
     if (filter === "kasni") {
       return svaUpozorenja.filter((u) => u.diff !== null && u.diff < 0);
     }
@@ -413,6 +425,8 @@ const nazivRadnikaPoOib = (oib: string) => {
   const uskoro7 = svaUpozorenja.filter(
     (u) => u.diff !== null && u.diff > 0 && u.diff <= 7
   );
+  const hitno = svaUpozorenja.filter((u) => u.diff !== null && u.diff <= 0);
+  const info = svaUpozorenja.filter((u) => u.diff === null || u.diff > 30);
   const uskoro30 = svaUpozorenja.filter(
     (u) => u.diff !== null && u.diff > 7 && u.diff <= 30
   );
@@ -421,7 +435,7 @@ const nazivRadnikaPoOib = (oib: string) => {
     return (
       <div style={pageStyle}>
         <div style={containerStyle}>
-          <div style={cardStyle}>Učitavanje upozorenja...</div>
+          <div style={cardStyle}>UÄitavanje upozorenja...</div>
         </div>
       </div>
     );
@@ -432,8 +446,8 @@ const nazivRadnikaPoOib = (oib: string) => {
       <div style={pageStyle}>
         <div style={containerStyle}>
           <div style={cardStyle}>
-            <h1 style={titleStyle}>Greška</h1>
-            <p>{greska || "Tvrtka nije pronađena."}</p>
+            <h1 style={titleStyle}>GreÅ¡ka</h1>
+            <p>{greska || "Tvrtka nije pronaÄ‘ena."}</p>
             <Link href={`/tvrtke/${firmaId}`} style={primaryLinkStyle}>
               Natrag na tvrtku
             </Link>
@@ -448,7 +462,7 @@ const nazivRadnikaPoOib = (oib: string) => {
       <div style={containerStyle}>
         <div style={{ marginBottom: 16 }}>
           <Link href={`/tvrtke/${firmaId}`} style={backLinkStyle}>
-            ← Natrag na tvrtku
+            â† Natrag na tvrtku
           </Link>
         </div>
 
@@ -457,16 +471,16 @@ const nazivRadnikaPoOib = (oib: string) => {
             <div style={badgeStyle}>Centralna upozorenja</div>
             <h1 style={heroTitleStyle}>{tvrtka.naziv}</h1>
             <div style={heroMetaStyle}>
-              Jedan pregled svih rokova, kašnjenja i obaveza po modulima.
+              Jedan pregled svih rokova, kaÅ¡njenja i obaveza po modulima.
             </div>
           </div>
         </div>
 
         <div style={statsGridStyle}>
           <StatKartica naslov="Ukupno" vrijednost={svaUpozorenja.length} />
-          <StatKartica naslov="Kasni" vrijednost={kasni.length} danger />
-          <StatKartica naslov="Danas" vrijednost={danas.length} warning />
-          <StatKartica naslov="U 7 dana" vrijednost={uskoro7.length} warning />
+          <StatKartica naslov="Hitno" vrijednost={hitno.length} danger />
+          <StatKartica naslov="Uskoro" vrijednost={uskoro7.length + uskoro30.length} warning />
+          <StatKartica naslov="Info" vrijednost={info.length} />
         </div>
 
         <div style={filterCardStyle}>
@@ -479,6 +493,39 @@ const nazivRadnikaPoOib = (oib: string) => {
             }}
           >
             Sve
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilter("hitno")}
+            style={{
+              ...filterButtonStyle,
+              ...(filter === "hitno" ? activeFilterButtonStyle : {}),
+            }}
+          >
+            Hitno
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilter("uskoro")}
+            style={{
+              ...filterButtonStyle,
+              ...(filter === "uskoro" ? activeFilterButtonStyle : {}),
+            }}
+          >
+            Uskoro
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilter("info")}
+            style={{
+              ...filterButtonStyle,
+              ...(filter === "info" ? activeFilterButtonStyle : {}),
+            }}
+          >
+            Info
           </button>
 
           <button
@@ -516,10 +563,10 @@ const nazivRadnikaPoOib = (oib: string) => {
         </div>
 
         <Sekcija
-          naslov="Crveno — kasni"
-          opis="Sve stavke kojima je rok već prošao."
+          naslov="Crveno â€” kasni"
+          opis="Sve stavke kojima je rok veÄ‡ proÅ¡ao."
           items={kasni}
-          empty="Nema zakašnjelih stavki."
+          empty="Nema zakaÅ¡njelih stavki."
           formatDate={formatDate}
           tekstRoka={tekstRoka}
         />
@@ -534,17 +581,17 @@ const nazivRadnikaPoOib = (oib: string) => {
         />
 
         <Sekcija
-          naslov="Uskoro — sljedećih 7 dana"
+          naslov="Uskoro â€” sljedeÄ‡ih 7 dana"
           opis="Stavke koje dolaze vrlo brzo."
           items={uskoro7}
-          empty="Nema stavki u sljedećih 7 dana."
+          empty="Nema stavki u sljedeÄ‡ih 7 dana."
           formatDate={formatDate}
           tekstRoka={tekstRoka}
         />
 
         <Sekcija
-          naslov="Kasnije — 8 do 30 dana"
-          opis="Nadolazeće obaveze u sljedećih mjesec dana."
+          naslov="Kasnije â€” 8 do 30 dana"
+          opis="NadolazeÄ‡e obaveze u sljedeÄ‡ih mjesec dana."
           items={uskoro30}
           empty="Nema stavki u periodu 8 do 30 dana."
           formatDate={formatDate}
@@ -649,6 +696,18 @@ function Sekcija({
   );
 }
 
+function prioritetIzDiffa(diff: number | null) {
+  if (diff === null || diff > 30) {
+    return { label: "Info", bg: "#e5e7eb", color: "#111827", border: "#cbd5e1" };
+  }
+
+  if (diff <= 0) {
+    return { label: "Hitno", bg: "#fee2e2", color: "#991b1b", border: "#f87171" };
+  }
+
+  return { label: "Uskoro", bg: "#fffbeb", color: "#92400e", border: "#fbbf24" };
+}
+
 function UpozorenjeKartica({
   item,
   formatDate,
@@ -658,10 +717,22 @@ function UpozorenjeKartica({
   formatDate: (value: string | null) => string;
   tekstRoka: (diff: number | null) => string;
 }) {
+  const prioritet = prioritetIzDiffa(item.diff);
+
   return (
     <div style={warningItemStyle}>
       <div style={warningLeftStyle}>
         <div style={topLineStyle}>
+          <span
+            style={{
+              ...groupPillStyle,
+              background: prioritet.bg,
+              color: prioritet.color,
+              border: `1px solid ${prioritet.border}`,
+            }}
+          >
+            {prioritet.label}
+          </span>
           <span style={groupPillStyle}>{item.grupa}</span>
           <span
             style={{
