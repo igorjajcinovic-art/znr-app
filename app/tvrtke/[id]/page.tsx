@@ -179,19 +179,19 @@ export default function TvrtkaDetaljiPage() {
         }).catch(() => null),
       ]);
 
-      if (!tvrtkeRes.ok) throw new Error("Ne mogu uÄitati tvrtke.");
-      if (!radniciRes.ok) throw new Error("Ne mogu uÄitati radnike.");
-      if (!preglediRes.ok) throw new Error("Ne mogu uÄitati lijeÄniÄke.");
+      if (!tvrtkeRes.ok) throw new Error("Ne mogu ucitati tvrtke.");
+      if (!radniciRes.ok) throw new Error("Ne mogu ucitati radnike.");
+      if (!preglediRes.ok) throw new Error("Ne mogu ucitati lijecnicke.");
       if (!osposobljavanjaRes.ok) {
-        throw new Error("Ne mogu uÄitati osposobljavanja.");
+        throw new Error("Ne mogu ucitati osposobljavanja.");
       }
-      if (!opremaRes.ok) throw new Error("Ne mogu uÄitati zaÅ¡titnu opremu.");
+      if (!opremaRes.ok) throw new Error("Ne mogu ucitati zastitnu opremu.");
       if (!radnaOpremaRes.ok) {
-        throw new Error("Ne mogu uÄitati radnu opremu i strojeve.");
+        throw new Error("Ne mogu ucitati radnu opremu i strojeve.");
       }
 
       if (!vatrogasniRes.ok) {
-        throw new Error("Ne mogu uÄitati vatrogasne aparate.");
+        throw new Error("Ne mogu ucitati vatrogasne aparate.");
       }
 
       const sveTvrtke: Tvrtka[] = await tvrtkeRes.json();
@@ -224,7 +224,7 @@ export default function TvrtkaDetaljiPage() {
       const nadenaTvrtka = sveTvrtke.find((t) => t.id === firmaId) || null;
 
       if (!nadenaTvrtka) {
-        throw new Error("Tvrtka nije pronaÄ‘ena.");
+        throw new Error("Tvrtka nije pronadena.");
       }
 
       setTvrtka(nadenaTvrtka);
@@ -238,7 +238,7 @@ export default function TvrtkaDetaljiPage() {
       setRadnoVrijeme(radnoVrijemeData);
     } catch (err) {
       setGreska(
-        err instanceof Error ? err.message : "GreÅ¡ka pri uÄitavanju."
+        err instanceof Error ? err.message : "Greska pri ucitavanju."
       );
     } finally {
       setUcitavanje(false);
@@ -364,49 +364,49 @@ export default function TvrtkaDetaljiPage() {
   const modules = [
     {
       naziv: "Radnici",
-      opis: "Pregled, unos, ureÄ‘ivanje, povijest i CSV uvoz/izvoz radnika.",
+      opis: "Pregled, unos, uredivanje, povijest i CSV uvoz/izvoz radnika.",
       href: `/tvrtke/${firmaId}/radnici`,
       broj: radnici.length,
       oznaka: "ukupno",
     },
     {
-      naziv: "LijeÄniÄki pregledi",
-      opis: "Evidencija pregleda, rokova i upozorenja za lijeÄniÄke preglede.",
+      naziv: "Lijecnicki pregledi",
+      opis: "Evidencija pregleda, rokova i upozorenja za lijecnicke preglede.",
       href: `/tvrtke/${firmaId}/lijecnicki`,
       broj: pregledi.length,
       oznaka: "zapisa",
     },
     {
-      naziv: "StruÄna osposobljavanja",
-      opis: "PraÄ‡enje osposobljavanja, rokova valjanosti i svih statusa.",
+      naziv: "Strucna osposobljavanja",
+      opis: "Pracenje osposobljavanja, rokova valjanosti i svih statusa.",
       href: `/tvrtke/${firmaId}/osposobljavanja`,
       broj: osposobljavanja.length,
       oznaka: "zapisa",
     },
     {
-      naziv: "Osobna zaÅ¡titna oprema",
-      opis: "ZaduÅ¾enje opreme, rokovi zamjene i pregled stanja po radniku.",
+      naziv: "Osobna zastitna oprema",
+      opis: "Zaduzenje opreme, rokovi zamjene i pregled stanja po radniku.",
       href: `/tvrtke/${firmaId}/oprema`,
       broj: oprema.length,
       oznaka: "zapisa",
     },
     {
-      naziv: "Radna oprema i strojevi",
-      opis: "Evidencija strojeva, alata i druge radne opreme po tvrtki.",
+      naziv: "Radna oprema, strojevi i ispitivanja",
+      opis: "Evidencija strojeva, alata, opreme i drugih ispitivanja po tvrtki.",
       href: `/tvrtke/${firmaId}/radna-oprema`,
       broj: radnaOprema.length,
       oznaka: "zapisa",
     },
     {
       naziv: "Vatrogasni aparati",
-      opis: "Popis aparata, redovni tromjeseÄni i periodiÄki godiÅ¡nji pregledi.",
+      opis: "Popis aparata, redovni tromjesecni i periodicni godisnji pregledi.",
       href: `/tvrtke/${firmaId}/vatrogasni-aparati`,
       broj: vatrogasniAparati.length,
       oznaka: "aparata",
     },
     {
       naziv: "Planer",
-      opis: "Planiranje lijeÄniÄkih pregleda, servisa, ispitivanja i drugih obaveza.",
+      opis: "Planiranje lijecnickih pregleda, servisa, ispitivanja i drugih obaveza.",
       href: `/tvrtke/${firmaId}/planer`,
       broj: planer.length,
       oznaka: "stavki",
@@ -420,7 +420,7 @@ export default function TvrtkaDetaljiPage() {
     },
     {
       naziv: "Ugovori",
-      opis: "Izrada ugovora o radu na neodreÄ‘eno vrijeme iz podataka radnika.",
+      opis: "Izrada ugovora o radu na neodredeno vrijeme iz podataka radnika.",
       href: `/tvrtke/${firmaId}/ugovori`,
       broj: brojAktivnih,
       oznaka: "radnika",
@@ -431,7 +431,7 @@ export default function TvrtkaDetaljiPage() {
     return (
       <div style={pageStyle}>
         <div style={containerStyle}>
-          <div style={loadingBoxStyle}>UÄitavanje...</div>
+          <div style={loadingBoxStyle}>Ucitavanje...</div>
         </div>
       </div>
     );
@@ -443,7 +443,7 @@ export default function TvrtkaDetaljiPage() {
         <div style={containerStyle}>
           <div style={heroCardStyle}>
             <h1 style={{ fontSize: 30, fontWeight: 700, marginBottom: 16 }}>
-              Tvrtka nije pronaÄ‘ena
+              Tvrtka nije pronadena
             </h1>
 
             <p style={{ marginBottom: 16 }}>
@@ -451,7 +451,7 @@ export default function TvrtkaDetaljiPage() {
             </p>
 
             <Link href="/tvrtke" style={primaryLinkStyle}>
-              Natrag na tvrtke
+            {"\u2190"} Natrag na tvrtke
             </Link>
           </div>
         </div>
@@ -464,7 +464,7 @@ export default function TvrtkaDetaljiPage() {
       <div style={containerStyle}>
         <div style={{ marginBottom: 16 }}>
           <Link href="/tvrtke" style={backLinkStyle}>
-            â† Natrag na tvrtke
+            {"\u2190"} Natrag na tvrtke
           </Link>
         </div>
 
@@ -503,7 +503,7 @@ export default function TvrtkaDetaljiPage() {
               target="_blank"
               style={printButtonStyle}
             >
-              Ispis lijeÄniÄkih
+              Ispis lijecnickih
             </a>
 
             <a
@@ -559,7 +559,7 @@ export default function TvrtkaDetaljiPage() {
             highlight={brojDozvolaUpozorenja > 0}
           />
           <StatKartica
-            naslov="LijeÄniÄki - upozorenja"
+            naslov="Lijecnicki - upozorenja"
             vrijednost={brojLijecnickihUpozorenja}
             highlight={brojLijecnickihUpozorenja > 0}
           />
@@ -583,7 +583,7 @@ export default function TvrtkaDetaljiPage() {
         <div style={sectionHeaderStyle}>
           <h2 style={sectionTitleStyle}>Moduli tvrtke</h2>
           <div style={sectionSubtitleStyle}>
-            Odaberi podruÄje u kojem Å¾eliÅ¡ raditi.
+            Odaberi podrucje u kojem zelis raditi.
           </div>
         </div>
 
