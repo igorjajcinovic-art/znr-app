@@ -38,7 +38,7 @@ function rowsFor(data: BackupData, keyName: string) {
 }
 
 async function postRows(table: string, rows: unknown[], addLog: (text: string) => void) {
-  const batchSize = table === "Radnik" ? 100 : 150;
+  const batchSize = table === "RadnaOpremaDokument" || table === "RadnikDokument" ? 1 : table === "Radnik" ? 100 : 150;
   let imported = 0;
 
   for (let i = 0; i < rows.length; i += batchSize) {
@@ -257,3 +257,4 @@ const errorStyle: React.CSSProperties = {
   color: "#b91c1c",
   fontWeight: 900,
 };
+
