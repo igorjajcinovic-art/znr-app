@@ -50,8 +50,9 @@ type CellDraft = {
   napomena: string;
 };
 
-type BolovanjeForma = {
+type OdsutnostForma = {
   radnikId: string;
+  vrsta: "godisnji" | "bolovanje" | "neopravdano";
   datumOd: string;
   datumDo: string;
   napomena: string;
@@ -228,8 +229,9 @@ export default function RadnoVrijemePage() {
   const [mjesec, setMjesec] = useState(todayMonth());
   const [filterRadnik, setFilterRadnik] = useState("");
   const [drafts, setDrafts] = useState<Record<string, CellDraft>>({});
-  const [bolovanjeForma, setBolovanjeForma] = useState<BolovanjeForma>({
+  const [odsutnostForma, setOdsutnostForma] = useState<OdsutnostForma>({
     radnikId: "",
+    vrsta: "bolovanje",
     datumOd: "",
     datumDo: "",
     napomena: "",
@@ -459,10 +461,10 @@ export default function RadnoVrijemePage() {
     });
   };
 
-  const primijeniBolovanje = () => {
-    const radnikId = bolovanjeForma.radnikId;
-    const start = dateFromIso(bolovanjeForma.datumOd);
-    const end = dateFromIso(bolovanjeForma.datumDo);
+  const primijeniOdsutnost = () => {
+    const radnikId = odsutnostForma.radnikId;
+    const start = dateFromIso(odsutnostForma.datumOd);
+    const end = dateFromIso(odsutnostForma.datumDo);
 
     if (!radnikId || !start || !end) {
       alert("Odaberi radnika te datum od i datum do.");
@@ -488,8 +490,8 @@ export default function RadnoVrijemePage() {
           datum: iso,
           pocetak: "",
           kraj: "",
-          status: "bolovanje",
-          napomena: bolovanjeForma.napomena.trim(),
+          status: odsutnostForma.vrsta,
+          napomena: odsutnostForma.napomena.trim(),
         });
       }
 
@@ -506,11 +508,10 @@ export default function RadnoVrijemePage() {
 
     setPoruka(
       noviZapisi.length > 0
-        ? `Bolovanje je pripremljeno za ${noviZapisi.length} radnih dana. Klikni Spremi izmjene za upis.`
+        ? `${absenceCode(odsutnostForma.vrsta)} je pripremljeno za ${noviZapisi.length} radnih dana. Klikni Spremi izmjene za upis.`
         : "U odabranom rasponu nema radnih dana u prikazanom mjesecu."
     );
   };
-
   const rowTotal = (radnikId: string) =>
     dani.reduce((sum, day) => {
       const value = getCellValue(radnikId, day);
@@ -603,7 +604,7 @@ export default function RadnoVrijemePage() {
 
     if (nepotvrdeno > 0) {
       alert(
-        `Prije izvoza potvrdi radno vrijeme kvačicom. Nepotvrđenih dana: ${nepotvrdeno}.`
+        `Prije izvoza potvrdi radno vrijeme kvacicom. Nepotvrdenih dana: ${nepotvrdeno}.`
       );
       return false;
     }
@@ -886,10 +887,10 @@ export default function RadnoVrijemePage() {
 
         <div style={bolovanjePanelStyle}>
           <div>
-            <h2 style={smallPanelTitleStyle}>Unesi bolovanje</h2>
+            <h2 style={smallPanelTitleStyle}>Unesi odsutnost</h2>
             <p style={mutedStyle}>
-              Odaberi radnika i raspon datuma. Aplikacija ce oznaciti radne dane
-              u ovom mjesecu kao BO.
+              Odaberi radnika, vrstu i raspon datuma. Aplikacija ce oznaciti radne dane
+              u ovom mjesecu kao GO, BO ili NO.
             </p>
           </div>
 
@@ -897,10 +898,10 @@ export default function RadnoVrijemePage() {
             <Field label="Radnik">
               <select
                 style={inputStyle}
-                value={bolovanjeForma.radnikId}
+                value={odsutnostForma.radnikId}
                 onChange={(e) =>
-                  setBolovanjeForma({
-                    ...bolovanjeForma,
+                  setOdsutnostForma({
+                    ...odsutnostForma,
                     radnikId: e.target.value,
                   })
                 }
@@ -914,16 +915,33 @@ export default function RadnoVrijemePage() {
               </select>
             </Field>
 
+            <Field label="Vrsta">
+              <select
+                style={inputStyle}
+                value={odsutnostForma.vrsta}
+                onChange={(e) =>
+                  setOdsutnostForma({
+                    ...odsutnostForma,
+                    vrsta: e.target.value as OdsutnostForma["vrsta"],
+                  })
+                }
+              >
+                <option value="bolovanje">BO - bolovanje</option>
+                <option value="godisnji">GO - godisnji odmor</option>
+                <option value="neopravdano">NO - neopravdani izostanak</option>
+              </select>
+            </Field>
+
             <Field label="Datum od">
               <input
                 type="date"
                 style={inputStyle}
-                value={bolovanjeForma.datumOd}
+                value={odsutnostForma.datumOd}
                 onChange={(e) =>
-                  setBolovanjeForma({
-                    ...bolovanjeForma,
+                  setOdsutnostForma({
+                    ...odsutnostForma,
                     datumOd: e.target.value,
-                    datumDo: bolovanjeForma.datumDo || e.target.value,
+                    datumDo: odsutnostForma.datumDo || e.target.value,
                   })
                 }
               />
@@ -933,38 +951,37 @@ export default function RadnoVrijemePage() {
               <input
                 type="date"
                 style={inputStyle}
-                value={bolovanjeForma.datumDo}
+                value={odsutnostForma.datumDo}
                 onChange={(e) =>
-                  setBolovanjeForma({
-                    ...bolovanjeForma,
+                  setOdsutnostForma({
+                    ...odsutnostForma,
                     datumDo: e.target.value,
                   })
                 }
               />
             </Field>
 
-            <Field label="Napomena / doznaka">
+            <Field label="Napomena">
               <input
                 style={inputStyle}
-                value={bolovanjeForma.napomena}
+                value={odsutnostForma.napomena}
                 onChange={(e) =>
-                  setBolovanjeForma({
-                    ...bolovanjeForma,
+                  setOdsutnostForma({
+                    ...odsutnostForma,
                     napomena: e.target.value,
                   })
                 }
-                placeholder="npr. doznaka dostavljena"
+                placeholder="npr. doznaka, rjesenje ili napomena"
               />
             </Field>
 
             <div style={bolovanjeActionStyle}>
-              <button style={primaryButtonStyle} onClick={primijeniBolovanje}>
-                Primijeni BO
+              <button style={primaryButtonStyle} onClick={primijeniOdsutnost}>
+                Primijeni oznaku
               </button>
             </div>
           </div>
         </div>
-
         {greska ? <div style={errorStyle}>{greska}</div> : null}
         {poruka ? <div style={successStyle}>{poruka}</div> : null}
 
@@ -1117,7 +1134,7 @@ export default function RadnoVrijemePage() {
                                     )
                                   }
                                 />
-                                <span>✓</span>
+                                <span>{"\u2713"}</span>
                               </label>
                               <button
                                 type="button"
@@ -1263,7 +1280,7 @@ const smallPanelTitleStyle: React.CSSProperties = {
 
 const bolovanjeGridStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "minmax(220px, 1.2fr) repeat(2, minmax(150px, 0.8fr)) minmax(220px, 1fr) auto",
+  gridTemplateColumns: "minmax(220px, 1.2fr) minmax(180px, 0.9fr) repeat(2, minmax(150px, 0.8fr)) minmax(220px, 1fr) auto",
   gap: 12,
   alignItems: "end",
   marginTop: 12,
