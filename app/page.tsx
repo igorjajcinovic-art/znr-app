@@ -1,4 +1,5 @@
 import Link from "next/link";
+import WeatherWidget from "@/app/components/WeatherWidget";
 import {
   daysUntil,
   formatHrDate,
@@ -104,10 +105,10 @@ export default async function Page() {
         const radnik = radnikPoFirmiIOibu.get(`${p.firmaId}-${p.oib}`);
         return {
           title: radnik?.ime || p.oib,
-          detail: p.vrsta || "Liječnički pregled",
+          detail: p.vrsta || "Lijecnicki pregled",
           date: p.vrijediDo,
           href: `/tvrtke/${p.firmaId}/lijecnicki`,
-          type: "Liječnički",
+          type: "Lijecnicki",
         };
       }),
     ...osposobljavanja
@@ -178,7 +179,7 @@ export default async function Page() {
           <div style={eyebrowStyle}>Pregled sustava</div>
           <h1 style={titleStyle}>ZNR dashboard</h1>
           <p style={subtitleStyle}>
-            Brzi pregled tvrtki, radnika, rokova i zadataka koji traže pažnju.
+            Brzi pregled tvrtki, radnika, rokova i zadataka koji traze paznju.
           </p>
         </div>
 
@@ -221,8 +222,8 @@ export default async function Page() {
         <div style={panelStyle}>
           <div style={panelHeaderStyle}>
             <div>
-              <h2 style={panelTitleStyle}>Najbliži rokovi</h2>
-              <div style={mutedStyle}>Isteklo ili istječe u idućih 30 dana</div>
+              <h2 style={panelTitleStyle}>Najblizi rokovi</h2>
+              <div style={mutedStyle}>Isteklo ili istjece u iducih 30 dana</div>
             </div>
             <Link href="/upozorenja" style={smallLinkStyle}>
               Sva upozorenja
@@ -247,8 +248,8 @@ export default async function Page() {
                     <div style={rowMainStyle}>
                       <div style={rowTitleStyle}>{rok.title}</div>
                       <div style={rowMetaStyle}>
-                        {rok.type} · {rok.detail}
-                        {tvrtka ? ` · ${tvrtka.naziv}` : ""}
+                        {rok.type} - {rok.detail}
+                        {tvrtka ? ` - ${tvrtka.naziv}` : ""}
                       </div>
                     </div>
                     <div
@@ -268,11 +269,12 @@ export default async function Page() {
         </div>
 
         <aside style={sideStackStyle}>
+          <WeatherWidget />
           <div style={panelStyle}>
             <h2 style={panelTitleStyle}>Upozorenja po tipu</h2>
             <div style={warningListStyle}>
               <WarningRow label="Dozvole" value={upozorenja.dozvole} />
-              <WarningRow label="Liječnički" value={upozorenja.lijecnicki} />
+              <WarningRow label="Lijecnicki" value={upozorenja.lijecnicki} />
               <WarningRow
                 label="Osposobljavanja"
                 value={upozorenja.osposobljavanja}
@@ -302,7 +304,7 @@ export default async function Page() {
                 </Link>
               ))}
               {zadnjeTvrtke.length === 0 ? (
-                <div style={emptyStyle}>Još nema unesenih tvrtki.</div>
+                <div style={emptyStyle}>Jos nema unesenih tvrtki.</div>
               ) : null}
             </div>
           </div>
