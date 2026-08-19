@@ -69,6 +69,7 @@ export async function ensureApplicationTables() {
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  await run(`ALTER TABLE "LijecnickiPregled" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'aktivno';`);
   await run(`CREATE INDEX IF NOT EXISTS "LijecnickiPregled_firmaId_idx" ON "LijecnickiPregled"("firmaId");`);
   await run(`CREATE INDEX IF NOT EXISTS "LijecnickiPregled_firmaId_oib_idx" ON "LijecnickiPregled"("firmaId", "oib");`);
   await run(`CREATE INDEX IF NOT EXISTS "LijecnickiPregled_status_idx" ON "LijecnickiPregled"("status");`);
@@ -87,6 +88,7 @@ export async function ensureApplicationTables() {
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  await run(`ALTER TABLE "StrucnoOsposobljavanje" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'aktivno';`);
   await run(`CREATE INDEX IF NOT EXISTS "StrucnoOsposobljavanje_firmaId_idx" ON "StrucnoOsposobljavanje"("firmaId");`);
   await run(`CREATE INDEX IF NOT EXISTS "StrucnoOsposobljavanje_firmaId_oib_idx" ON "StrucnoOsposobljavanje"("firmaId", "oib");`);
   await run(`CREATE INDEX IF NOT EXISTS "StrucnoOsposobljavanje_status_idx" ON "StrucnoOsposobljavanje"("status");`);
@@ -106,6 +108,8 @@ export async function ensureApplicationTables() {
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  await run(`ALTER TABLE "Oprema" ADD COLUMN IF NOT EXISTS "kolicina" INTEGER NOT NULL DEFAULT 1;`);
+  await run(`ALTER TABLE "Oprema" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'aktivno';`);
   await run(`CREATE INDEX IF NOT EXISTS "Oprema_firmaId_idx" ON "Oprema"("firmaId");`);
   await run(`CREATE INDEX IF NOT EXISTS "Oprema_firmaId_oib_idx" ON "Oprema"("firmaId", "oib");`);
   await run(`CREATE INDEX IF NOT EXISTS "Oprema_status_idx" ON "Oprema"("status");`);
