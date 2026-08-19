@@ -96,7 +96,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
     if (pathname.includes("/radno-vrijeme")) return "Radno vrijeme";
     if (pathname.includes("/ugovori")) return "Ugovori";
     if (pathname.includes("/upozorenja")) return "Upozorenja";
-    if (pathname.includes("/backup")) return "Backup";
     if (pathname.includes("/korisnici")) return "Korisnici";
     if (pathname.includes("/dnevnik-promjena")) return "Dnevnik promjena";
     if (pathname.startsWith("/tvrtke/")) return "Detalji tvrtke";
@@ -168,11 +167,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
       label: "Upozorenja",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/upozorenja` : "/tvrtke",
       icon: "!",
-    },
-    {
-      label: "Backup",
-      href: "/backup",
-      icon: "B",
     },
     {
       label: "Korisnici",

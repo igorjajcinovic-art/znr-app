@@ -169,6 +169,37 @@ export default function TvrtkePage() {
     }
   };
 
+  const preuzmiBackupSve = async () => {
+    try {
+      setGreska("");
+      setBackupingId("__all__");
+
+      const res = await fetch("/api/backup");
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Ne mogu napraviti backup svih podataka.");
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") || "";
+      const match = disposition.match(/filename="([^"]+)"/);
+      const fileName = match?.[1] || "znr-backup.json";
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setGreska(err instanceof Error ? err.message : "Greska pri backupu.");
+    } finally {
+      setBackupingId(null);
+    }
+  };
+
   const preuzmiBackupTvrtke = async (tvrtka: Tvrtka) => {
     try {
       setGreska("");
@@ -190,6 +221,7 @@ export default function TvrtkePage() {
       link.href = url;
       link.download = fileName;
       document.body.appendChild(link);
+
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
@@ -221,6 +253,17 @@ export default function TvrtkePage() {
               Odaberi postojeću tvrtku ili dodaj novu.
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={preuzmiBackupSve}
+            disabled={backupingId !== null}
+            style={primaryButtonStyle}
+          >
+            {backupingId === "__all__"
+              ? "Pripremam backup..."
+              : "Backup svih podataka"}
+          </button>
         </div>
 
         <div style={cardStyle}>
@@ -461,6 +504,11 @@ const heroCardStyle: React.CSSProperties = {
   boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
   padding: 28,
   marginBottom: 24,
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 16,
+  flexWrap: "wrap",
 };
 
 const badgeStyle: React.CSSProperties = {
