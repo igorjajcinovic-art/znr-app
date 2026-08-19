@@ -50,13 +50,13 @@ export default function TvrtkePage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || "Ne mogu uÄitati tvrtke.");
+        throw new Error(text || "Ne mogu ucitati tvrtke.");
       }
 
       const data: Tvrtka[] = await res.json();
       setTvrtke(data);
     } catch (err) {
-      setGreska(err instanceof Error ? err.message : "GreÅ¡ka pri uÄitavanju.");
+      setGreska(err instanceof Error ? err.message : "Greska pri ucitavanju.");
     } finally {
       setLoading(false);
     }
@@ -109,7 +109,7 @@ export default function TvrtkePage() {
       setForma(praznaForma);
       await ucitajTvrtke();
     } catch (err) {
-      setGreska(err instanceof Error ? err.message : "GreÅ¡ka pri spremanju.");
+      setGreska(err instanceof Error ? err.message : "Greska pri spremanju.");
     } finally {
       setSaving(false);
     }
@@ -163,7 +163,7 @@ export default function TvrtkePage() {
       odustaniOdUredjivanja();
       await ucitajTvrtke();
     } catch (err) {
-      setGreska(err instanceof Error ? err.message : "Greska pri ureÄ‘ivanju.");
+      setGreska(err instanceof Error ? err.message : "Greska pri uredivanju.");
     } finally {
       setUpdating(false);
     }
@@ -236,7 +236,7 @@ export default function TvrtkePage() {
     return (
       <div style={pageStyle}>
         <div style={containerStyle}>
-          <div style={cardStyle}>UÄitavanje...</div>
+          <div style={cardStyle}>Ucitavanje...</div>
         </div>
       </div>
     );
@@ -250,7 +250,7 @@ export default function TvrtkePage() {
             <div style={badgeStyle}>ZNR aplikacija</div>
             <h1 style={heroTitleStyle}>Tvrtke</h1>
             <div style={heroTextStyle}>
-              Odaberi postojeÄ‡u tvrtku ili dodaj novu.
+              Odaberi postojecu tvrtku ili dodaj novu.
             </div>
           </div>
 
@@ -345,7 +345,7 @@ export default function TvrtkePage() {
                 value={pretraga}
                 onChange={(e) => setPretraga(e.target.value)}
                 style={inputStyle}
-                placeholder="PretraÅ¾i naziv, OIB ili adresu..."
+                placeholder="Pretrazi naziv, OIB ili adresu..."
               />
             </div>
           </div>

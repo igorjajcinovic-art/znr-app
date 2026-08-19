@@ -18,7 +18,7 @@ export async function ensureApplicationTables() {
   `);
   await run(`ALTER TABLE "Tvrtka" ADD COLUMN IF NOT EXISTS "adresa" TEXT;`);
   await run(`ALTER TABLE "Tvrtka" ADD COLUMN IF NOT EXISTS "direktor" TEXT;`);
-  await run(`CREATE UNIQUE INDEX IF NOT EXISTS "Tvrtka_oib_key" ON "Tvrtka"("oib");`);
+  await run(`CREATE INDEX IF NOT EXISTS "Tvrtka_oib_idx" ON "Tvrtka"("oib");`);
 
   await run(`
     CREATE TABLE IF NOT EXISTS "Radnik" (
