@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const AUTH_SECRET = process.env.AUTH_SECRET || "dev-secret-promijeni";
@@ -163,7 +163,7 @@ export async function proxy(req: NextRequest) {
     pathname.startsWith("/logo") ||
     pathname.startsWith("/uploads");
 
-  if (isLogin || isAuthApi || isAdminResetApi || isBackupImportApi || isNextAsset || isPublicFile) {
+  if (isLogin || isAuthApi || isNextAsset || isPublicFile) {
     return NextResponse.next();
   }
 
