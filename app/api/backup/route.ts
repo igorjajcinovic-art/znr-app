@@ -1,11 +1,42 @@
 import { prisma } from "@/lib/prisma";
+import { ensureApplicationTables } from "@/lib/database";
 import { ensureTvrtkaDirektorColumn, type TvrtkaRecord } from "@/lib/companies";
 import { ensureVatrogasniAparatiTable } from "@/lib/fire-extinguishers";
 import { ensureRadnikDokumentiTable } from "@/lib/worker-documents";
 import { ensureTvrtkaDokumentiTable } from "@/lib/company-documents";
-import { ensureRadnikUlicaColumn } from "@/lib/workers";
 
 type RawRow = Record<string, unknown>;
+
+type BackupFileRow = { fileUrl?: unknown };
+
+const MAX_EMBEDDED_FILE_URL_LENGTH = 200_000;
+
+function prepareRowsForBackup<T extends BackupFileRow>(rows: T[]) {
+  let omittedFiles = 0;
+
+  const safeRows = rows.map((row) => {
+    const fileUrl = row.fileUrl;
+
+    if (
+      typeof fileUrl === "string" &&
+      fileUrl.startsWith("data:") &&
+      fileUrl.length > MAX_EMBEDDED_FILE_URL_LENGTH
+    ) {
+      omittedFiles += 1;
+
+      return {
+        ...row,
+        fileUrl: "[izostavljeno iz backup-a jer je datoteka prevelika]",
+        fileOmittedFromBackup: true,
+        originalFileUrlLength: fileUrl.length,
+      };
+    }
+
+    return row;
+  });
+
+  return { rows: safeRows, omittedFiles };
+}
 
 function backupFileName(prefix: string, naziv?: string | null) {
   const safeName = naziv
@@ -22,7 +53,7 @@ function backupFileName(prefix: string, naziv?: string | null) {
 
 export async function GET(req: Request) {
   try {
-    await ensureRadnikUlicaColumn();
+    await ensureApplicationTables();
     await ensureTvrtkaDirektorColumn();
     await ensureRadnikDokumentiTable();
     await ensureTvrtkaDokumentiTable();
@@ -40,7 +71,7 @@ export async function GET(req: Request) {
       const tvrtka = tvrtke[0];
 
       if (!tvrtka) {
-        return new Response("Tvrtka nije pronaÃ„â€˜ena.", { status: 404 });
+        return new Response("Tvrtka nije pronadena.", { status: 404 });
       }
 
       const [
@@ -110,6 +141,10 @@ export async function GET(req: Request) {
           })
         : [];
 
+      const safeRadnaOpremaDokumenti = prepareRowsForBackup(radnaOpremaDokumenti);
+      const safeRadnikDokumenti = prepareRowsForBackup(radnikDokumenti);
+      const safeTvrtkaDokumenti = prepareRowsForBackup(tvrtkaDokumenti);
+
       const backup = {
         exportedAt: new Date().toISOString(),
         app: "ZNR aplikacija",
@@ -130,6 +165,10 @@ export async function GET(req: Request) {
           planer: planer.length,
           radnikDokumenti: radnikDokumenti.length,
           tvrtkaDokumenti: tvrtkaDokumenti.length,
+          izostavljeneVelikeDatoteke:
+            safeRadnaOpremaDokumenti.omittedFiles +
+            safeRadnikDokumenti.omittedFiles +
+            safeTvrtkaDokumenti.omittedFiles,
           vatrogasniAparati: vatrogasniAparati.length,
           vatrogasniPregledi: vatrogasniPregledi.length,
         },
@@ -140,10 +179,10 @@ export async function GET(req: Request) {
           osposobljavanja,
           oprema,
           radnaOprema,
-          radnaOpremaDokumenti,
+          radnaOpremaDokumenti: safeRadnaOpremaDokumenti.rows,
           planer,
-          radnikDokumenti,
-          tvrtkaDokumenti,
+          radnikDokumenti: safeRadnikDokumenti.rows,
+          tvrtkaDokumenti: safeTvrtkaDokumenti.rows,
           vatrogasniAparati,
           vatrogasniPregledi,
         },
@@ -222,6 +261,10 @@ export async function GET(req: Request) {
       }),
     ]);
 
+    const safeRadnaOpremaDokumenti = prepareRowsForBackup(radnaOpremaDokumenti);
+    const safeRadnikDokumenti = prepareRowsForBackup(radnikDokumenti);
+    const safeTvrtkaDokumenti = prepareRowsForBackup(tvrtkaDokumenti);
+
     const backup = {
       exportedAt: new Date().toISOString(),
       app: "ZNR aplikacija",
@@ -237,6 +280,10 @@ export async function GET(req: Request) {
         planer: planer.length,
         radnikDokumenti: radnikDokumenti.length,
         tvrtkaDokumenti: tvrtkaDokumenti.length,
+        izostavljeneVelikeDatoteke:
+          safeRadnaOpremaDokumenti.omittedFiles +
+          safeRadnikDokumenti.omittedFiles +
+          safeTvrtkaDokumenti.omittedFiles,
         vatrogasniAparati: vatrogasniAparati.length,
         vatrogasniPregledi: vatrogasniPregledi.length,
         users: users.length,
@@ -248,10 +295,10 @@ export async function GET(req: Request) {
         osposobljavanja,
         oprema,
         radnaOprema,
-        radnaOpremaDokumenti,
+        radnaOpremaDokumenti: safeRadnaOpremaDokumenti.rows,
         planer,
-        radnikDokumenti,
-        tvrtkaDokumenti,
+        radnikDokumenti: safeRadnikDokumenti.rows,
+        tvrtkaDokumenti: safeTvrtkaDokumenti.rows,
         vatrogasniAparati,
         vatrogasniPregledi,
         users,

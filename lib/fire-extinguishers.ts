@@ -95,7 +95,7 @@ export async function ensureVatrogasniAparatiTable() {
   `);
 
   await prisma.$executeRawUnsafe(`
-    CREATE UNIQUE INDEX IF NOT EXISTS "VatrogasniAparatPregled_unique_idx"
+    CREATE INDEX IF NOT EXISTS "VatrogasniAparatPregled_lookup_idx"
     ON "VatrogasniAparatPregled"("aparatId", "vrstaPregleda", "datumPregleda");
   `);
 }
