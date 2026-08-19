@@ -16,6 +16,8 @@ export async function ensureApplicationTables() {
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  await run(`ALTER TABLE "Tvrtka" ADD COLUMN IF NOT EXISTS "adresa" TEXT;`);
+  await run(`ALTER TABLE "Tvrtka" ADD COLUMN IF NOT EXISTS "direktor" TEXT;`);
   await run(`CREATE UNIQUE INDEX IF NOT EXISTS "Tvrtka_oib_key" ON "Tvrtka"("oib");`);
 
   await run(`

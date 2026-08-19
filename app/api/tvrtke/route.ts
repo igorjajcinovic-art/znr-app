@@ -1,7 +1,9 @@
+import { ensureApplicationTables } from "@/lib/database";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
+    await ensureApplicationTables();
     const tvrtke = await prisma.tvrtka.findMany({
       orderBy: { naziv: "asc" },
     });
@@ -15,6 +17,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    await ensureApplicationTables();
     const body = await req.json();
 
     const naziv = String(body?.naziv ?? "").trim();
