@@ -1,4 +1,4 @@
-﻿import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 async function run(sql: string) {
   await prisma.$executeRawUnsafe(sql);
@@ -41,7 +41,18 @@ export async function ensureApplicationTables() {
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "aktivan" BOOLEAN NOT NULL DEFAULT true;`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "datumOdjave" TIMESTAMP(3);`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "datumRodjenja" TIMESTAMP(3);`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "grad" TEXT;`);
   await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "ulica" TEXT;`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "radnoMjesto" TEXT;`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "imaDozvolu" BOOLEAN NOT NULL DEFAULT false;`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "dozvolaDo" TIMESTAMP(3);`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "znrOsposobljen" BOOLEAN NOT NULL DEFAULT false;`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "znrDatum" TIMESTAMP(3);`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "zopOsposobljen" BOOLEAN NOT NULL DEFAULT false;`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "zopDatum" TIMESTAMP(3);`);
   await run(`CREATE INDEX IF NOT EXISTS "Radnik_firmaId_idx" ON "Radnik"("firmaId");`);
 
   await run(`

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import RadnikDokumentiPanel from "@/app/components/RadnikDokumentiPanel";
-import { ensureRadnikUlicaColumn } from "@/lib/workers";
+import { ensureApplicationTables } from "@/lib/database";
 import {
   deadlineStatus,
   deadlineText,
@@ -65,7 +65,7 @@ function formatRadniStaz(start: Date | string | null, end?: Date | string | null
 
 export default async function RadnikDetaljPage({ params }: PageProps) {
   const { id: firmaId, radnikId } = await params;
-  await ensureRadnikUlicaColumn();
+  await ensureApplicationTables();
 
   const [tvrtka, radnik, adresaRows] = await Promise.all([
     prisma.tvrtka.findUnique({ where: { id: firmaId } }),
@@ -134,7 +134,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
     <div style={pageStyle}>
       <div style={topNavStyle}>
         <Link href={`/tvrtke/${firmaId}/radnici`} style={backLinkStyle}>
-          â† Natrag na sve radnike
+          {"\u2190"} Natrag na sve radnike
         </Link>
         <Link href={`/tvrtke/${firmaId}`} style={plainLinkStyle}>
           {tvrtka.naziv}
@@ -148,7 +148,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
           <div style={eyebrowStyle}>Profil radnika</div>
           <h1 style={titleStyle}>{radnik.ime}</h1>
           <div style={subtitleStyle}>
-            {radnik.radnoMjesto || "Radno mjesto nije upisano"} Â· OIB {radnik.oib}
+            {radnik.radnoMjesto || "Radno mjesto nije upisano"} {"\u00b7"} OIB {radnik.oib}
           </div>
         </div>
 
@@ -171,7 +171,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
       </section>
 
       <section style={statsGridStyle}>
-        <Metric label="LijeÄniÄki" value={lijecnicki.length} />
+        <Metric label="Lijecnicki" value={lijecnicki.length} />
         <Metric label="Osposobljavanja" value={osposobljavanja.length} />
         <Metric label="OZO arhiva" value={ozo.length} />
         <Metric label="Upozorenja" value={kriticno + uskoro} tone={kriticno > 0 ? "danger" : uskoro > 0 ? "warning" : "ok"} />
@@ -184,11 +184,11 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
             <Detail label="Tvrtka" value={tvrtka.naziv} />
             <Detail label="Status" value={radnik.aktivan ? "Aktivan" : "Neaktivan"} />
             <Detail label="Datum zaposlenja" value={formatHrDate(radnik.datumZaposlenja)} />
-            <Detail label="Radni staÅ¾ kod poslodavca" value={radniStazKodPoslodavca} />
+            <Detail label="Radni staz kod poslodavca" value={radniStazKodPoslodavca} />
             <Detail label="Datum odjave" value={formatHrDate(radnik.datumOdjave)} />
-            <Detail label="Datum roÄ‘enja" value={formatHrDate(radnik.datumRodjenja)} />
+            <Detail label="Datum rodjenja" value={formatHrDate(radnik.datumRodjenja)} />
             <Detail label="Grad / mjesto" value={radnik.grad || "-"} />
-            <Detail label="Ulica i kuÄ‡ni broj" value={adresaRows[0]?.ulica || "-"} />
+            <Detail label="Ulica i kucni broj" value={adresaRows[0]?.ulica || "-"} />
             <Detail label="Radno mjesto" value={radnik.radnoMjesto || "-"} />
             <Detail label="OIB" value={radnik.oib} />
           </div>
@@ -199,7 +199,7 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
           <div style={timelineStyle}>
             <TimelineItem
               title="Radna dozvola"
-              detail={radnik.imaDozvolu ? deadlineText(radnik.dozvolaDo) : "Nije oznaÄeno da ima dozvolu"}
+              detail={radnik.imaDozvolu ? deadlineText(radnik.dozvolaDo) : "Nije oznaceno da ima dozvolu"}
               date={formatHrDate(radnik.dozvolaDo)}
               status={radnik.imaDozvolu ? deadlineStatus(radnik.dozvolaDo) : "muted"}
             />
@@ -223,8 +223,8 @@ export default async function RadnikDetaljPage({ params }: PageProps) {
 
       <section style={recordsGridStyle}>
         <RecordPanel
-          title="LijeÄniÄki pregledi"
-          empty="Nema lijeÄniÄkih pregleda."
+          title="Lijecnicki pregledi"
+          empty="Nema lijecnickih pregleda."
         >
           {lijecnicki.map((item) => (
             <RecordRow
