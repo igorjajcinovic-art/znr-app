@@ -81,7 +81,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     if (pathname === "/") return "Dashboard";
     if (pathname === "/tvrtke") return "Tvrtke";
     if (pathname.includes("/radnici")) return "Radnici";
-    if (pathname.includes("/lijecnicki")) return "LijeÄniÄki pregledi";
+    if (pathname.includes("/lijecnicki")) return "Lije\u010Dni\u010Dki pregledi";
     if (pathname.includes("/osposobljavanja")) return "Osposobljavanja";
     if (pathname.includes("/vatrogasni-aparati")) {
       return "Vatrogasni aparati";
@@ -108,34 +108,34 @@ export default function AppShell({ children }: { children: ReactNode }) {
     {
       label: "Dashboard",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}` : "/tvrtke",
-      icon: "âŒ‚",
+      icon: "D",
     },
     {
       label: "Tvrtke",
       href: "/tvrtke",
-      icon: "â–¦",
+      icon: "T",
     },
     {
       label: "Radnici",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/radnici` : "/tvrtke",
-      icon: "ðŸ‘¥",
+      icon: "R",
     },
     {
-      label: "LijeÄniÄki pregledi",
+      label: "Lije\u010Dni\u010Dki pregledi",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/lijecnicki` : "/tvrtke",
-      icon: "âš•",
+      icon: "L",
     },
     {
       label: "Osposobljavanja",
       href: imaAktivnuFirmu
         ? `/tvrtke/${firmaId}/osposobljavanja`
         : "/tvrtke",
-      icon: "â–±",
+      icon: "O",
     },
     {
       label: "OZO oprema",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/oprema` : "/tvrtke",
-      icon: "â–£",
+      icon: "Z",
     },
     {
       label: "Vatrogasni aparati",
@@ -147,22 +147,22 @@ export default function AppShell({ children }: { children: ReactNode }) {
     {
       label: "Radna oprema, strojevi i ispitivanja",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/radna-oprema` : "/tvrtke",
-      icon: "âš’",
+      icon: "S",
     },
     {
       label: "Planer",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/planer` : "/tvrtke",
-      icon: "â–¢",
+      icon: "P",
     },
     {
       label: "Radno vrijeme",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/radno-vrijeme` : "/tvrtke",
-      icon: "h",
+      icon: "H",
     },
     {
       label: "Ugovori",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/ugovori` : "/tvrtke",
-      icon: "Â§",
+      icon: "U",
     },
     {
       label: "Upozorenja",
@@ -345,7 +345,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               onClick={() => setMenuOpen(false)}
               style={mobileCloseButtonStyle}
             >
-              Ã—
+              X
             </button>
 
             {SidebarContent}
@@ -361,7 +361,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             style={mobileMenuButtonStyle}
             onClick={() => setMenuOpen(true)}
           >
-            â˜°
+            Menu
           </button>
 
           <div className="znr-topbar-title">
@@ -377,7 +377,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               href={imaAktivnuFirmu ? `/tvrtke/${firmaId}/upozorenja` : "/tvrtke"}
               style={notificationWrapStyle}
             >
-              <div style={bellStyle}>ðŸ””</div>
+              <div style={bellStyle}>!</div>
 
               {brojUpozorenja > 0 ? (
                 <div style={notificationDotStyle}>
