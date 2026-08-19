@@ -81,7 +81,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     if (pathname === "/") return "Dashboard";
     if (pathname === "/tvrtke") return "Tvrtke";
     if (pathname.includes("/radnici")) return "Radnici";
-    if (pathname.includes("/lijecnicki")) return "Liječnički pregledi";
+    if (pathname.includes("/lijecnicki")) return "LijeÄniÄki pregledi";
     if (pathname.includes("/osposobljavanja")) return "Osposobljavanja";
     if (pathname.includes("/vatrogasni-aparati")) {
       return "Vatrogasni aparati";
@@ -96,6 +96,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     if (pathname.includes("/radno-vrijeme")) return "Radno vrijeme";
     if (pathname.includes("/ugovori")) return "Ugovori";
     if (pathname.includes("/upozorenja")) return "Upozorenja";
+    if (pathname.includes("/backup")) return "Backup";
     if (pathname.includes("/korisnici")) return "Korisnici";
     if (pathname.includes("/dnevnik-promjena")) return "Dnevnik promjena";
     if (pathname.startsWith("/tvrtke/")) return "Detalji tvrtke";
@@ -107,34 +108,34 @@ export default function AppShell({ children }: { children: ReactNode }) {
     {
       label: "Dashboard",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}` : "/tvrtke",
-      icon: "⌂",
+      icon: "âŒ‚",
     },
     {
       label: "Tvrtke",
       href: "/tvrtke",
-      icon: "▦",
+      icon: "â–¦",
     },
     {
       label: "Radnici",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/radnici` : "/tvrtke",
-      icon: "👥",
+      icon: "ðŸ‘¥",
     },
     {
-      label: "Liječnički pregledi",
+      label: "LijeÄniÄki pregledi",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/lijecnicki` : "/tvrtke",
-      icon: "⚕",
+      icon: "âš•",
     },
     {
       label: "Osposobljavanja",
       href: imaAktivnuFirmu
         ? `/tvrtke/${firmaId}/osposobljavanja`
         : "/tvrtke",
-      icon: "▱",
+      icon: "â–±",
     },
     {
       label: "OZO oprema",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/oprema` : "/tvrtke",
-      icon: "▣",
+      icon: "â–£",
     },
     {
       label: "Vatrogasni aparati",
@@ -146,12 +147,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
     {
       label: "Radna oprema, strojevi i ispitivanja",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/radna-oprema` : "/tvrtke",
-      icon: "⚒",
+      icon: "âš’",
     },
     {
       label: "Planer",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/planer` : "/tvrtke",
-      icon: "▢",
+      icon: "â–¢",
     },
     {
       label: "Radno vrijeme",
@@ -161,12 +162,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
     {
       label: "Ugovori",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/ugovori` : "/tvrtke",
-      icon: "§",
+      icon: "Â§",
     },
     {
       label: "Upozorenja",
       href: imaAktivnuFirmu ? `/tvrtke/${firmaId}/upozorenja` : "/tvrtke",
       icon: "!",
+    },
+    {
+      label: "Backup",
+      href: "/backup",
+      icon: "B",
     },
     {
       label: "Korisnici",
@@ -339,7 +345,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               onClick={() => setMenuOpen(false)}
               style={mobileCloseButtonStyle}
             >
-              ×
+              Ã—
             </button>
 
             {SidebarContent}
@@ -355,7 +361,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             style={mobileMenuButtonStyle}
             onClick={() => setMenuOpen(true)}
           >
-            ☰
+            â˜°
           </button>
 
           <div className="znr-topbar-title">
@@ -371,7 +377,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               href={imaAktivnuFirmu ? `/tvrtke/${firmaId}/upozorenja` : "/tvrtke"}
               style={notificationWrapStyle}
             >
-              <div style={bellStyle}>🔔</div>
+              <div style={bellStyle}>ðŸ””</div>
 
               {brojUpozorenja > 0 ? (
                 <div style={notificationDotStyle}>
