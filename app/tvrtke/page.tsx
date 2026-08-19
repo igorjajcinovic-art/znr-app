@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import WeatherWidget from "@/app/components/WeatherWidget";
 import { useEffect, useMemo, useState } from "react";
 
 type Tvrtka = {
@@ -333,6 +334,10 @@ export default function TvrtkePage() {
           </div>
         </div>
 
+        <div style={weatherWrapStyle}>
+          <WeatherWidget />
+        </div>
+
         <div style={cardStyle}>
           <div style={sectionTopStyle}>
             <div>
@@ -543,6 +548,10 @@ const cardStyle: React.CSSProperties = {
   marginBottom: 24,
 };
 
+
+const weatherWrapStyle: React.CSSProperties = {
+  marginBottom: 24,
+};
 const sectionTopStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
