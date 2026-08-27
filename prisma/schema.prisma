@@ -94,6 +94,7 @@ model Oprema {
   firmaId        String
   oib            String
   vrsta          String
+  velicina       String?
   datumIzdavanja DateTime
   kolicina       Int      @default(1)
   rokZamjene     DateTime?

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { parseHrDate } from "@/lib/dates";
+import { ensureApplicationTables } from "@/lib/database";
 
 function normalizeVrsta(value: string) {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
@@ -10,12 +11,15 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureApplicationTables();
+
     const { id } = await params;
     const body = await req.json();
 
     const firmaId = String(body?.firmaId ?? "").trim();
     const oib = String(body?.oib ?? "").trim();
     const vrsta = String(body?.vrsta ?? "").trim();
+    const velicina = String(body?.velicina ?? "").trim();
     const kolicina = Number(body?.kolicina ?? 1);
 
     if (!firmaId || !oib || !vrsta) {
@@ -62,6 +66,7 @@ export async function PUT(
         firmaId,
         oib,
         vrsta,
+        velicina: velicina || null,
         datumIzdavanja,
         kolicina: Number.isNaN(kolicina) || kolicina < 1 ? 1 : kolicina,
         rokZamjene,
@@ -108,6 +113,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureApplicationTables();
+
     const { id } = await params;
 
     await prisma.oprema.delete({

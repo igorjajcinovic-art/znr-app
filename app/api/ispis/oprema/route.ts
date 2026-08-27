@@ -91,6 +91,7 @@ export async function GET(req: Request) {
             <th>Radnik</th>
             <th>OIB</th>
             <th>Vrsta</th>
+            <th>Velicina</th>
             <th>Datum izdavanja</th>
             <th>Količina</th>
             <th>Rok zamjene</th>
@@ -106,6 +107,7 @@ export async function GET(req: Request) {
                 <td>${getIme(z.oib)}</td>
                 <td>${z.oib}</td>
                 <td>${z.vrsta}</td>
+                <td>${z.velicina || ""}</td>
                 <td>${formatDate(z.datumIzdavanja)}</td>
                 <td>${z.kolicina}</td>
                 <td>${formatDate(z.rokZamjene)}</td>

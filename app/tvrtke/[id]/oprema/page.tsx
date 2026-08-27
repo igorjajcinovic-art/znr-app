@@ -24,6 +24,7 @@ type Oprema = {
   firmaId: string;
   oib: string;
   vrsta: string;
+  velicina: string | null;
   datumIzdavanja: string;
   kolicina: number;
   rokZamjene: string | null;
@@ -34,6 +35,7 @@ type Oprema = {
 type FormaOprema = {
   oib: string;
   vrsta: string;
+  velicina: string;
   datumIzdavanja: string;
   kolicina: string;
   rokZamjene: string;
@@ -43,15 +45,27 @@ type FormaOprema = {
 type CsvImportRow = {
   oib: string;
   vrsta: string;
+  velicina: string;
   datumIzdavanja: string;
   kolicina: string;
   rokZamjene: string;
   napomena: string;
 };
 
+const STANDARDNE_VRSTE_OZO = [
+  "Hlace",
+  "Jakna",
+  "Cipele",
+  "Reflektirajuci prsluk",
+  "Majica",
+  "Kaciga",
+  "Rukavice",
+  "Ostalo",
+];
 const praznaForma: FormaOprema = {
   oib: "",
   vrsta: "",
+  velicina: "",
   datumIzdavanja: "",
   kolicina: "1",
   rokZamjene: "",
@@ -240,6 +254,7 @@ export default function OpremaPage() {
       "Ime i prezime",
       "OIB",
       "Vrsta opreme",
+      "Velicina",
       "Datum izdavanja",
       "Količina",
       "Rok zamjene",
@@ -255,6 +270,7 @@ export default function OpremaPage() {
         radnik?.ime || "",
         z.oib,
         z.vrsta,
+        z.velicina || "",
         formatDate(z.datumIzdavanja),
         z.kolicina,
         formatDate(z.rokZamjene),
@@ -335,6 +351,7 @@ export default function OpremaPage() {
     const idxOib = indexOf("oib");
     const idxVrsta = indexOf("vrsta opreme", "vrsta");
     const idxDatumIzdavanja = indexOf("datum izdavanja", "izdavanje");
+    const idxVelicina = indexOf("velicina", "veličina", "broj");
     const idxKolicina = indexOf("kolicina", "količina");
     const idxRokZamjene = indexOf("rok zamjene");
     const idxNapomena = indexOf("napomena");
@@ -346,6 +363,7 @@ export default function OpremaPage() {
       return {
         oib: get(idxOib),
         vrsta: get(idxVrsta),
+        velicina: get(idxVelicina),
         datumIzdavanja: get(idxDatumIzdavanja),
         kolicina: get(idxKolicina),
         rokZamjene: get(idxRokZamjene),
@@ -460,6 +478,34 @@ export default function OpremaPage() {
     });
   }, [oprema, radnici, filterRadnik, filterVrsta, filterRok, filterZaduzenje]);
 
+
+  const narudzbaPoVelicinama = useMemo(() => {
+    const mapa = new Map<string, { vrsta: string; velicina: string; kolicina: number }>();
+
+    oprema
+      .filter((item) => (item.status || "aktivno") === "aktivno")
+      .forEach((item) => {
+        const vrsta = item.vrsta || "Ostalo";
+        const velicina = item.velicina || "Bez velicine";
+        const key = `${vrsta}|${velicina}`;
+        const postojece = mapa.get(key);
+        const kolicina = Number(item.kolicina || 1);
+
+        if (postojece) {
+          postojece.kolicina += Number.isNaN(kolicina) ? 1 : kolicina;
+        } else {
+          mapa.set(key, {
+            vrsta,
+            velicina,
+            kolicina: Number.isNaN(kolicina) ? 1 : kolicina,
+          });
+        }
+      });
+
+    return [...mapa.values()].sort((a, b) =>
+      a.vrsta.localeCompare(b.vrsta, "hr") || a.velicina.localeCompare(b.velicina, "hr")
+    );
+  }, [oprema]);
   const spremi = async () => {
     if (!firmaId) {
       alert("Nedostaje ID tvrtke.");
@@ -492,6 +538,7 @@ export default function OpremaPage() {
       firmaId,
       oib: forma.oib,
       vrsta: forma.vrsta.trim(),
+      velicina: forma.velicina.trim() || null,
       datumIzdavanja,
       kolicina: Number(forma.kolicina || "1"),
       rokZamjene: rokZamjene || null,
@@ -530,6 +577,7 @@ export default function OpremaPage() {
     setForma({
       oib: z.oib,
       vrsta: z.vrsta,
+      velicina: z.velicina || "",
       datumIzdavanja:
         formatDate(z.datumIzdavanja) === "-" ? "" : formatDate(z.datumIzdavanja),
       kolicina: String(z.kolicina),
@@ -695,9 +743,25 @@ export default function OpremaPage() {
               <label style={labelStyle}>Vrsta opreme</label>
               <input
                 style={inputStyle}
+                list="ozo-vrste"
                 value={forma.vrsta}
                 onChange={(e) => setForma({ ...forma, vrsta: e.target.value })}
-                placeholder="npr. zaštitne cipele"
+                placeholder="npr. Cipele"
+              />
+              <datalist id="ozo-vrste">
+                {STANDARDNE_VRSTE_OZO.map((vrsta) => (
+                  <option key={vrsta} value={vrsta} />
+                ))}
+              </datalist>
+            </div>
+
+            <div>
+              <label style={labelStyle}>Velicina</label>
+              <input
+                style={inputStyle}
+                value={forma.velicina}
+                onChange={(e) => setForma({ ...forma, velicina: e.target.value })}
+                placeholder="npr. XL, 52, 43"
               />
             </div>
 
@@ -767,6 +831,33 @@ export default function OpremaPage() {
           {greska && <div style={errorBoxStyle}>{greska}</div>}
         </div>
 
+
+        <div style={cardStyle}>
+          <div style={tableHeaderStyle}>
+            <div>
+              <h2 style={{ ...sectionTitleStyle, marginBottom: 4 }}>
+                Pregled za narudzbu
+              </h2>
+              <div style={sectionSubtitleStyle}>
+                Zbroj aktivno zadužene OZO opreme po vrsti i velicini.
+              </div>
+            </div>
+          </div>
+
+          {narudzbaPoVelicinama.length === 0 ? (
+            <div style={emptyBoxStyle}>Nema aktivno zadužene opreme za zbroj.</div>
+          ) : (
+            <div style={orderGridStyle}>
+              {narudzbaPoVelicinama.map((item) => (
+                <div key={`${item.vrsta}-${item.velicina}`} style={orderItemStyle}>
+                  <div style={orderTitleStyle}>{item.vrsta}</div>
+                  <div style={orderMetaStyle}>Velicina: {item.velicina}</div>
+                  <div style={orderCountStyle}>{item.kolicina} kom</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <div style={cardStyle}>
           <div style={tableHeaderStyle}>
             <div>
@@ -838,6 +929,7 @@ export default function OpremaPage() {
                 <tr style={{ background: "#f9fafb" }}>
                   <th style={thStyle}>Radnik</th>
                   <th style={thStyle}>Vrsta</th>
+                  <th style={thStyle}>Velicina</th>
                   <th style={thStyle}>Datum izdavanja</th>
                   <th style={thStyle}>Količina</th>
                   <th style={thStyle}>Rok zamjene</th>
@@ -850,7 +942,7 @@ export default function OpremaPage() {
               <tbody>
                 {filtriranaOprema.length === 0 ? (
                   <tr>
-                    <td colSpan={9} style={tdCenterStyle}>
+                    <td colSpan={10} style={tdCenterStyle}>
                       Nema zapisa.
                     </td>
                   </tr>
@@ -868,6 +960,7 @@ export default function OpremaPage() {
                           </div>
                         </td>
                         <td style={tdStyle}>{z.vrsta}</td>
+                        <td style={tdStyle}>{z.velicina || "-"}</td>
                         <td style={tdStyle}>{formatDate(z.datumIzdavanja)}</td>
                         <td style={tdStyle}>{z.kolicina}</td>
                         <td style={tdStyle}>{formatDate(z.rokZamjene)}</td>
@@ -1100,6 +1193,45 @@ const errorBoxStyle: React.CSSProperties = {
   border: "1px solid #f87171",
 };
 
+
+const emptyBoxStyle: React.CSSProperties = {
+  background: "#f8fafc",
+  borderRadius: 12,
+  padding: 14,
+  color: "#64748b",
+  fontWeight: 700,
+};
+
+const orderGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gap: 12,
+};
+
+const orderItemStyle: React.CSSProperties = {
+  border: "1px solid #e2e8f0",
+  borderRadius: 12,
+  padding: 14,
+  background: "#f8fafc",
+};
+
+const orderTitleStyle: React.CSSProperties = {
+  fontWeight: 800,
+  color: "#111827",
+  marginBottom: 6,
+};
+
+const orderMetaStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 13,
+  marginBottom: 10,
+};
+
+const orderCountStyle: React.CSSProperties = {
+  fontSize: 22,
+  fontWeight: 900,
+  color: "#0f172a",
+};
 const backLinkStyle: React.CSSProperties = {
   color: "#111827",
   textDecoration: "none",

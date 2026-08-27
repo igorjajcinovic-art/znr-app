@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { parseHrDate } from "@/lib/dates";
+import { ensureApplicationTables } from "@/lib/database";
 
 function normalizeVrsta(value: string) {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
@@ -7,6 +8,8 @@ function normalizeVrsta(value: string) {
 
 export async function GET(req: Request) {
   try {
+    await ensureApplicationTables();
+
     const { searchParams } = new URL(req.url);
     const firmaId = searchParams.get("firmaId");
 
@@ -24,11 +27,14 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    await ensureApplicationTables();
+
     const body = await req.json();
 
     const firmaId = String(body?.firmaId ?? "").trim();
     const oib = String(body?.oib ?? "").trim();
     const vrsta = String(body?.vrsta ?? "").trim();
+    const velicina = String(body?.velicina ?? "").trim();
     const kolicina = Number(body?.kolicina ?? 1);
 
     if (!firmaId || !oib || !vrsta) {
@@ -74,6 +80,7 @@ export async function POST(req: Request) {
         firmaId,
         oib,
         vrsta,
+        velicina: velicina || null,
         datumIzdavanja,
         kolicina: Number.isNaN(kolicina) || kolicina < 1 ? 1 : kolicina,
         rokZamjene,

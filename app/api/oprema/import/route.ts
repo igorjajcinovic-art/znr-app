@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { ensureApplicationTables } from "@/lib/database";
 
 type ImportRow = {
   oib?: string;
   vrsta?: string | null;
+  velicina?: string | null;
   datumIzdavanja?: string | null;
   kolicina?: string | number | null;
   rokZamjene?: string | null;
@@ -51,6 +53,8 @@ function parseDate(value: unknown): Date | null {
 
 export async function POST(req: Request) {
   try {
+    await ensureApplicationTables();
+
     const body = await req.json();
     const firmaId = String(body?.firmaId ?? "").trim();
     const rows: ImportRow[] = Array.isArray(body?.rows) ? body.rows : [];
@@ -83,6 +87,7 @@ export async function POST(req: Request) {
     for (const row of rows) {
       const oib = String(row.oib ?? "").trim();
       const vrsta = String(row.vrsta ?? "").trim();
+      const velicina = String(row.velicina ?? "").trim();
       const datumIzdavanja = parseDate(row.datumIzdavanja);
       const rokZamjene = parseDate(row.rokZamjene);
 
@@ -106,6 +111,7 @@ export async function POST(req: Request) {
           firmaId,
           oib,
           vrsta,
+          velicina: velicina || null,
           datumIzdavanja,
           kolicina,
           rokZamjene,
