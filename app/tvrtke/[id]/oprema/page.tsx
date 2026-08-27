@@ -53,15 +53,25 @@ type CsvImportRow = {
 };
 
 const STANDARDNE_VRSTE_OZO = [
-  "Hlace",
+  "Hlače",
   "Jakna",
   "Cipele",
-  "Reflektirajuci prsluk",
+  "Reflektirajući prsluk",
   "Majica",
   "Kaciga",
   "Rukavice",
   "Ostalo",
 ];
+
+const VELICINE_ODJECE = ["S", "M", "L", "XL", "XXL", "XXXL"];
+const VELICINE_CIPELA = Array.from({ length: 15 }, (_, i) => String(i + 35));
+const VRSTE_BEZ_VELICINE = new Set(["Kaciga", "Ostalo"]);
+
+function velicineZaVrstu(vrsta: string) {
+  if (vrsta === "Cipele") return VELICINE_CIPELA;
+  if (VRSTE_BEZ_VELICINE.has(vrsta)) return [];
+  return VELICINE_ODJECE;
+}
 const praznaForma: FormaOprema = {
   oib: "",
   vrsta: "",
@@ -95,6 +105,8 @@ export default function OpremaPage() {
 
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const ponudeneVelicine = useMemo(() => velicineZaVrstu(forma.vrsta), [forma.vrsta]);
 
   useEffect(() => {
     if (!firmaId) return;
@@ -254,7 +266,7 @@ export default function OpremaPage() {
       "Ime i prezime",
       "OIB",
       "Vrsta opreme",
-      "Velicina",
+      "Veličina",
       "Datum izdavanja",
       "Količina",
       "Rok zamjene",
@@ -486,7 +498,7 @@ export default function OpremaPage() {
       .filter((item) => (item.status || "aktivno") === "aktivno")
       .forEach((item) => {
         const vrsta = item.vrsta || "Ostalo";
-        const velicina = item.velicina || "Bez velicine";
+        const velicina = item.velicina || "Bez veličine";
         const key = `${vrsta}|${velicina}`;
         const postojece = mapa.get(key);
         const kolicina = Number(item.kolicina || 1);
@@ -741,28 +753,47 @@ export default function OpremaPage() {
 
             <div>
               <label style={labelStyle}>Vrsta opreme</label>
-              <input
+              <select
                 style={inputStyle}
-                list="ozo-vrste"
                 value={forma.vrsta}
-                onChange={(e) => setForma({ ...forma, vrsta: e.target.value })}
-                placeholder="npr. Cipele"
-              />
-              <datalist id="ozo-vrste">
+                onChange={(e) => {
+                  const vrsta = e.target.value;
+                  const velicine = velicineZaVrstu(vrsta);
+                  setForma({
+                    ...forma,
+                    vrsta,
+                    velicina: velicine.includes(forma.velicina) ? forma.velicina : "",
+                  });
+                }}
+              >
+                <option value="">Odaberi opremu</option>
                 {STANDARDNE_VRSTE_OZO.map((vrsta) => (
-                  <option key={vrsta} value={vrsta} />
+                  <option key={vrsta} value={vrsta}>
+                    {vrsta}
+                  </option>
                 ))}
-              </datalist>
+              </select>
             </div>
 
             <div>
-              <label style={labelStyle}>Velicina</label>
-              <input
+              <label style={labelStyle}>Veličina</label>
+              <select
                 style={inputStyle}
                 value={forma.velicina}
                 onChange={(e) => setForma({ ...forma, velicina: e.target.value })}
-                placeholder="npr. XL, 52, 43"
-              />
+                disabled={!forma.vrsta || ponudeneVelicine.length === 0}
+              >
+                <option value="">
+                  {forma.vrsta && ponudeneVelicine.length === 0
+                    ? "Nema veličine"
+                    : "Odaberi veličinu"}
+                </option>
+                {ponudeneVelicine.map((velicina) => (
+                  <option key={velicina} value={velicina}>
+                    {velicina}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -839,7 +870,7 @@ export default function OpremaPage() {
                 Pregled za narudzbu
               </h2>
               <div style={sectionSubtitleStyle}>
-                Zbroj aktivno zadužene OZO opreme po vrsti i velicini.
+                Zbroj aktivno zadužene OZO opreme po vrsti i veličini.
               </div>
             </div>
           </div>
@@ -851,7 +882,7 @@ export default function OpremaPage() {
               {narudzbaPoVelicinama.map((item) => (
                 <div key={`${item.vrsta}-${item.velicina}`} style={orderItemStyle}>
                   <div style={orderTitleStyle}>{item.vrsta}</div>
-                  <div style={orderMetaStyle}>Velicina: {item.velicina}</div>
+                  <div style={orderMetaStyle}>Veličina: {item.velicina}</div>
                   <div style={orderCountStyle}>{item.kolicina} kom</div>
                 </div>
               ))}
@@ -929,7 +960,7 @@ export default function OpremaPage() {
                 <tr style={{ background: "#f9fafb" }}>
                   <th style={thStyle}>Radnik</th>
                   <th style={thStyle}>Vrsta</th>
-                  <th style={thStyle}>Velicina</th>
+                  <th style={thStyle}>Veličina</th>
                   <th style={thStyle}>Datum izdavanja</th>
                   <th style={thStyle}>Količina</th>
                   <th style={thStyle}>Rok zamjene</th>
