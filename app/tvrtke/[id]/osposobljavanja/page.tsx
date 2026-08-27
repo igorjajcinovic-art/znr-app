@@ -20,6 +20,7 @@ type Osposobljavanje = {
   vrsta: string;
   datum: string;
   vrijediDo: string;
+  trajno?: boolean;
   napomena: string | null;
 };
 
@@ -35,6 +36,7 @@ type FormaOsposobljavanje = {
   vrsta: string;
   datum: string;
   vrijediDo: string;
+  trajno: boolean;
   napomena: string;
 };
 
@@ -43,6 +45,7 @@ type CsvImportRow = {
   vrsta: string;
   datum: string;
   vrijediDo: string;
+  trajno?: string;
   napomena: string;
 };
 
@@ -51,6 +54,7 @@ const praznaForma: FormaOsposobljavanje = {
   vrsta: "",
   datum: "",
   vrijediDo: "",
+  trajno: false,
   napomena: "",
 };
 
@@ -193,9 +197,9 @@ export default function OsposobljavanjaPage() {
         z.oib,
         z.vrsta,
         formatDate(z.datum),
-        formatDate(z.vrijediDo),
+        formatVrijediDo(z),
         statusRadnikaText(radnik),
-        statusRoka(z.vrijediDo).text,
+        statusRoka(z.vrijediDo, z.trajno).text,
         z.napomena || "",
       ];
     });
@@ -270,6 +274,7 @@ export default function OsposobljavanjaPage() {
     const idxVrsta = indexOf("vrsta osposobljavanja", "vrsta");
     const idxDatum = indexOf("datum osposobljavanja", "datum");
     const idxVrijediDo = indexOf("vrijedi do");
+    const idxTrajno = indexOf("trajno", "trajno vrijedi");
     const idxNapomena = indexOf("napomena");
 
     return lines.slice(1).map((line) => {
@@ -363,17 +368,28 @@ export default function OsposobljavanjaPage() {
     return Math.ceil((targetOnly.getTime() - todayOnly.getTime()) / (1000 * 60 * 60 * 24));
   };
 
-  const statusRoka = (value: string | null) => {
+  const isTrajno = (value?: boolean | string | null) => {
+    if (typeof value === "boolean") return value;
+    const text = String(value ?? "").trim().toLowerCase();
+    return ["da", "yes", "true", "1", "trajno"].includes(text);
+  };
+
+  const formatVrijediDo = (zapis: { vrijediDo: string | null; trajno?: boolean | string | null }) =>
+    isTrajno(zapis.trajno) ? "Trajno" : formatDate(zapis.vrijediDo);
+
+  const statusRoka = (value: string | null, trajno?: boolean | string | null) => {
+    if (isTrajno(trajno)) return { text: "Trajno", level: "ok" as const };
+
     const diff = daysUntil(value);
 
     if (diff === null) return { text: "-", level: "none" as const };
     if (diff < 0) return { text: `Isteklo prije ${Math.abs(diff)} dana`, level: "expired" as const };
     if (diff <= 30) return { text: `Istječe za ${diff} dana`, level: "warning" as const };
-    return { text: `Važi još ${diff} dana`, level: "ok" as const };
+    return { text: `Vrijedi još ${diff} dana`, level: "ok" as const };
   };
 
-  const statusStyle = (value: string | null): React.CSSProperties => {
-    const s = statusRoka(value);
+  const statusStyle = (value: string | null, trajno?: boolean | string | null): React.CSSProperties => {
+    const s = statusRoka(value, trajno);
 
     if (s.level === "expired") {
       return {
@@ -466,7 +482,7 @@ export default function OsposobljavanjaPage() {
 
   const upozorenja = useMemo(() => {
     return zapisi.filter((z) => {
-      const level = statusRoka(z.vrijediDo).level;
+      const level = statusRoka(z.vrijediDo, z.trajno).level;
       return level === "expired" || level === "warning";
     });
   }, [zapisi]);
@@ -474,7 +490,7 @@ export default function OsposobljavanjaPage() {
   const filtriranaOsposobljavanja = useMemo(() => {
     return zapisi.filter((z) => {
       const radnik = radniciPoOib.get(z.oib);
-      const status = statusRoka(z.vrijediDo).level;
+      const status = statusRoka(z.vrijediDo, z.trajno).level;
 
       const okRadnik =
         !filterRadnik ||
@@ -500,7 +516,7 @@ export default function OsposobljavanjaPage() {
 
   const brojVazecih = useMemo(
     () =>
-      zapisi.filter((z) => statusRoka(z.vrijediDo).level === "ok").length,
+      zapisi.filter((z) => statusRoka(z.vrijediDo, z.trajno).level === "ok").length,
     [zapisi]
   );
 
@@ -510,21 +526,21 @@ export default function OsposobljavanjaPage() {
       return;
     }
 
-    if (!forma.oib || !forma.vrsta || !forma.datum || !forma.vrijediDo) {
+    if (!forma.oib || !forma.vrsta || !forma.datum || (!forma.trajno && !forma.vrijediDo)) {
       alert("Unesi sve obavezne podatke.");
       return;
     }
 
     const datum = parseDate(forma.datum);
-    const vrijediDo = parseDate(forma.vrijediDo);
+    const vrijediDo = forma.trajno ? "" : parseDate(forma.vrijediDo);
 
     if (!datum) {
       alert("Datum osposobljavanja mora biti u obliku dd.mm.gggg");
       return;
     }
 
-    if (!vrijediDo) {
-      alert("Datum vrijedi do mora biti u obliku dd.mm.gggg");
+    if (!forma.trajno && !vrijediDo) {
+      alert("Datum vrijedi do mora biti u obliku dd.mm.gggg ili oznaci Trajno.");
       return;
     }
 
@@ -533,7 +549,8 @@ export default function OsposobljavanjaPage() {
       oib: forma.oib,
       vrsta: forma.vrsta,
       datum,
-      vrijediDo,
+      vrijediDo: forma.trajno ? null : vrijediDo,
+      trajno: forma.trajno,
       napomena: forma.napomena || null,
     };
 
@@ -572,8 +589,10 @@ export default function OsposobljavanjaPage() {
       oib: zapis.oib,
       vrsta: zapis.vrsta,
       datum: formatDate(zapis.datum) === "-" ? "" : formatDate(zapis.datum),
-      vrijediDo:
-        formatDate(zapis.vrijediDo) === "-" ? "" : formatDate(zapis.vrijediDo),
+      vrijediDo: zapis.trajno
+        ? ""
+        : formatDate(zapis.vrijediDo) === "-" ? "" : formatDate(zapis.vrijediDo),
+      trajno: Boolean(zapis.trajno),
       napomena: zapis.napomena || "",
     });
     setEditId(zapis.id);
@@ -718,7 +737,7 @@ export default function OsposobljavanjaPage() {
             <div style={warningListStyle}>
               {upozorenja.map((z) => {
                 const radnik = radniciPoOib.get(z.oib);
-                const status = statusRoka(z.vrijediDo);
+                const status = statusRoka(z.vrijediDo, z.trajno);
 
                 return (
                   <div
@@ -731,7 +750,7 @@ export default function OsposobljavanjaPage() {
                     }}
                   >
                     <strong>{radnik?.ime || z.oib}</strong> — {z.vrsta} —{" "}
-                    {formatDate(z.vrijediDo)} — {status.text}
+                    {formatVrijediDo(z)} — {status.text}
                   </div>
                 );
               })}
@@ -855,11 +874,26 @@ export default function OsposobljavanjaPage() {
             </Field>
 
             <Field label="Vrijedi do">
+              <label style={checkboxLabelStyle}>
+                <input
+                  type="checkbox"
+                  checked={forma.trajno}
+                  onChange={(e) =>
+                    setForma({
+                      ...forma,
+                      trajno: e.target.checked,
+                      vrijediDo: e.target.checked ? "" : forma.vrijediDo,
+                    })
+                  }
+                />
+                Trajno
+              </label>
               <input
-                style={inputStyle}
+                style={{ ...inputStyle, opacity: forma.trajno ? 0.55 : 1 }}
                 value={forma.vrijediDo}
                 onChange={(e) => setForma({ ...forma, vrijediDo: e.target.value })}
-                placeholder="dd.mm.gggg"
+                placeholder={forma.trajno ? "Trajno" : "dd.mm.gggg"}
+                disabled={forma.trajno}
               />
             </Field>
 
@@ -940,7 +974,7 @@ export default function OsposobljavanjaPage() {
                 ) : (
                   filtriranaOsposobljavanja.map((z) => {
                     const radnik = radniciPoOib.get(z.oib);
-                    const status = statusRoka(z.vrijediDo);
+                    const status = statusRoka(z.vrijediDo, z.trajno);
 
                     return (
                       <tr key={z.id}>
@@ -952,7 +986,7 @@ export default function OsposobljavanjaPage() {
                         <td style={tdStyle}>{z.oib}</td>
                         <td style={tdStyle}>{z.vrsta}</td>
                         <td style={tdStyle}>{formatDate(z.datum)}</td>
-                        <td style={tdStyle}>{formatDate(z.vrijediDo)}</td>
+                        <td style={tdStyle}>{formatVrijediDo(z)}</td>
                         <td style={tdStyle}>
                           <span
                             style={{
@@ -967,7 +1001,7 @@ export default function OsposobljavanjaPage() {
                           <span
                             style={{
                               ...pillStyle,
-                              ...statusStyle(z.vrijediDo),
+                              ...statusStyle(z.vrijediDo, z.trajno),
                             }}
                           >
                             {status.text}
@@ -1044,8 +1078,8 @@ export default function OsposobljavanjaPage() {
                   red="Datum osposobljavanja"
                   value={formatDate(detalji.datum)}
                 />
-                <Detalj red="Vrijedi do" value={formatDate(detalji.vrijediDo)} />
-                <Detalj red="Status" value={statusRoka(detalji.vrijediDo).text} />
+                <Detalj red="Vrijedi do" value={formatVrijediDo(detalji)} />
+                <Detalj red="Status" value={statusRoka(detalji.vrijediDo, detalji.trajno).text} />
                 <Detalj red="Napomena" value={detalji.napomena || "-"} />
               </div>
             </div>
@@ -1273,6 +1307,16 @@ const inputStyle: React.CSSProperties = {
   fontSize: 14,
   boxSizing: "border-box",
   background: "white",
+};
+
+const checkboxLabelStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  marginBottom: 8,
+  fontSize: 14,
+  fontWeight: 700,
+  color: "#111827",
 };
 
 const actionRowStyle: React.CSSProperties = {

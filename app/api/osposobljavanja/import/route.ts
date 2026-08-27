@@ -1,13 +1,21 @@
 import { prisma } from "@/lib/prisma";
+import { ensureApplicationTables } from "@/lib/database";
 
 type ImportRow = {
   oib?: string;
   vrsta?: string | null;
   datum?: string | null;
   vrijediDo?: string | null;
+  trajno?: string | boolean | null;
   napomena?: string | null;
 };
 
+const TRAJNO_VRIJEDI_DO = new Date("9999-12-31T00:00:00.000Z");
+
+function isTrajno(value: unknown) {
+  const text = String(value ?? "").trim().toLowerCase();
+  return ["da", "yes", "true", "1", "trajno"].includes(text);
+}
 function parseDate(value: unknown): Date | null {
   if (!value) return null;
 
@@ -46,6 +54,8 @@ function parseDate(value: unknown): Date | null {
 
 export async function POST(req: Request) {
   try {
+    await ensureApplicationTables();
+
     const body = await req.json();
     const firmaId = String(body?.firmaId ?? "");
     const rows: ImportRow[] = Array.isArray(body?.rows) ? body.rows : [];
@@ -65,7 +75,8 @@ export async function POST(req: Request) {
       const oib = String(row.oib ?? "").trim();
       const vrsta = String(row.vrsta ?? "").trim();
       const datum = parseDate(row.datum);
-      const vrijediDo = parseDate(row.vrijediDo);
+      const trajno = isTrajno(row.trajno) || isTrajno(row.vrijediDo);
+      const vrijediDo = trajno ? TRAJNO_VRIJEDI_DO : parseDate(row.vrijediDo);
 
       if (!oib || !vrsta || !datum || !vrijediDo) {
         skipped += 1;
@@ -79,6 +90,7 @@ export async function POST(req: Request) {
           vrsta,
           datum,
           vrijediDo,
+          trajno,
           napomena: row.napomena ? String(row.napomena).trim() : null,
         },
       });

@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { formatHrDateValue } from "@/lib/dates";
+function formatVrijediDo(zapis: { vrijediDo: Date; trajno?: boolean | null }) {
+  return zapis.trajno ? "Trajno" : formatHrDateValue(zapis.vrijediDo);
+}
 
 export async function GET(req: Request) {
   try {
@@ -49,7 +52,7 @@ export async function GET(req: Request) {
                 <td>${z.oib}</td>
                 <td>${z.vrsta}</td>
                 <td>${formatHrDateValue(z.datum)}</td>
-                <td>${formatHrDateValue(z.vrijediDo)}</td>
+                <td>${formatVrijediDo(z)}</td>
               </tr>
             `
             )

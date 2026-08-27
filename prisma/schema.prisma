@@ -75,6 +75,7 @@ model StrucnoOsposobljavanje {
   vrsta      String
   datum      DateTime
   vrijediDo  DateTime
+  trajno     Boolean   @default(false)
   status     String    @default("aktivno") // aktivno, uskoro, isteklo
   napomena   String?
 

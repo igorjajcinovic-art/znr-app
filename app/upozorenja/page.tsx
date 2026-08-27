@@ -46,6 +46,7 @@ type Osposobljavanje = {
   vrsta: string;
   datum: string;
   vrijediDo: string;
+  trajno?: boolean;
   napomena: string | null;
 };
 
@@ -296,6 +297,7 @@ if (!radnik) return null;
   const upozorenjaOsposobljavanja = useMemo<UpozorenjeItem[]>(() => {
     return osposobljavanja
       .map((o) => {
+        if (o.trajno) return null;
         const s = getStatus(o.vrijediDo);
         if (!s) return null;
 

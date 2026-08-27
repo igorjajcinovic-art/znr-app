@@ -48,6 +48,7 @@ type Osposobljavanje = {
   vrsta: string;
   datum: string;
   vrijediDo: string;
+  trajno?: boolean;
   napomena: string | null;
 };
 
@@ -324,7 +325,7 @@ export default function TvrtkaDetaljiPage() {
 
   const brojOsposobljavanjaUpozorenja = useMemo(
     () =>
-      osposobljavanja.filter((o) => istjeceUskoroIliIsteklo(o.vrijediDo)).length,
+      osposobljavanja.filter((o) => !o.trajno && istjeceUskoroIliIsteklo(o.vrijediDo)).length,
     [osposobljavanja]
   );
 

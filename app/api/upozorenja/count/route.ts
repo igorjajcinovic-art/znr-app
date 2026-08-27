@@ -49,7 +49,7 @@ export async function GET() {
     ).length;
 
     const osposobljavanjaCount = osposobljavanja.filter(
-      (o) => aktivniPoFirmiIOibu.has(`${o.firmaId}-${o.oib}`) && isWarningDate(o.vrijediDo)
+      (o) => aktivniPoFirmiIOibu.has(`${o.firmaId}-${o.oib}`) && !o.trajno && isWarningDate(o.vrijediDo)
     ).length;
 
     const ozoCount = ozo.filter(

@@ -90,6 +90,7 @@ export async function ensureApplicationTables() {
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  await run(`ALTER TABLE "StrucnoOsposobljavanje" ADD COLUMN IF NOT EXISTS "trajno" BOOLEAN NOT NULL DEFAULT false;`);
   await run(`ALTER TABLE "StrucnoOsposobljavanje" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'aktivno';`);
   await run(`CREATE INDEX IF NOT EXISTS "StrucnoOsposobljavanje_firmaId_idx" ON "StrucnoOsposobljavanje"("firmaId");`);
   await run(`CREATE INDEX IF NOT EXISTS "StrucnoOsposobljavanje_firmaId_oib_idx" ON "StrucnoOsposobljavanje"("firmaId", "oib");`);

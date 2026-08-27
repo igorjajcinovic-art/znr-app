@@ -1,11 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { parseHrDate } from "@/lib/dates";
+import { ensureApplicationTables } from "@/lib/database";
+
+const TRAJNO_VRIJEDI_DO = new Date("9999-12-31T00:00:00.000Z");
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureApplicationTables();
     const { id } = await params;
 
     const zapis = await prisma.strucnoOsposobljavanje.findUnique({
@@ -13,13 +17,13 @@ export async function GET(
     });
 
     if (!zapis) {
-      return new Response("Zapis nije pronađen.", { status: 404 });
+      return new Response("Zapis nije pronaden.", { status: 404 });
     }
 
     return Response.json(zapis);
   } catch (error) {
     console.error("GET /api/osposobljavanja/[id] error:", error);
-    return new Response("Ne mogu učitati osposobljavanje.", { status: 500 });
+    return new Response("Ne mogu ucitati osposobljavanje.", { status: 500 });
   }
 }
 
@@ -28,6 +32,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureApplicationTables();
     const { id } = await params;
     const body = await req.json();
 
@@ -35,7 +40,8 @@ export async function PUT(
     const oib = String(body?.oib ?? "").trim();
     const vrsta = String(body?.vrsta ?? "").trim();
     const datum = parseHrDate(body?.datum);
-    const vrijediDo = parseHrDate(body?.vrijediDo);
+    const trajno = Boolean(body?.trajno);
+    const vrijediDo = trajno ? TRAJNO_VRIJEDI_DO : parseHrDate(body?.vrijediDo);
 
     if (!firmaId || !oib || !vrsta || !datum || !vrijediDo) {
       return new Response("Nedostaju obavezni podaci.", { status: 400 });
@@ -49,6 +55,7 @@ export async function PUT(
         vrsta,
         datum,
         vrijediDo,
+        trajno,
         napomena: body?.napomena ? String(body.napomena).trim() : null,
       },
     });
