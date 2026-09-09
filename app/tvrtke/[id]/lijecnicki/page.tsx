@@ -203,7 +203,7 @@ export default function LijecnickiPage() {
       "Datum pregleda",
       "Vrijedi do",
       "Status",
-      "Napomene",
+      "Točke liječničkog pregleda",
     ];
 
     const rows = filtriraniPregledi.map((p) => {
@@ -289,7 +289,7 @@ export default function LijecnickiPage() {
     const idxAktivan = indexOf("aktivan", "status");
     const idxDatum = indexOf("datum pregleda", "datum");
     const idxVrijediDo = indexOf("vrijedi do");
-    const idxNapomena = indexOf("napomena", "napomene");
+    const idxNapomena = indexOf("točke liječničkog pregleda", "tocke lijecnickog pregleda", "napomena", "napomene");
 
     return lines.slice(1).map((line) => {
       const cols = parseCsvLine(line);
@@ -340,7 +340,7 @@ export default function LijecnickiPage() {
         vrsta: "",
         datum: get("datum pregleda", "datum"),
         vrijediDo: get("vrijedi do"),
-        napomena: get("napomena", "napomene"),
+        napomena: get("točke liječničkog pregleda", "tocke lijecnickog pregleda", "napomena", "napomene"),
       };
     });
   };
@@ -755,7 +755,7 @@ export default function LijecnickiPage() {
             Datoteka treba imati barem stupce:
             <strong> OIB</strong>, <strong>Datum pregleda</strong>,
             <strong> Vrijedi do</strong>.
-            Može imati i polja Aktivan i Napomene. Redovi gdje
+            Može imati i polja Aktivan i Točke liječničkog pregleda. Redovi gdje
             je Aktivan NE neće se uvesti.
           </div>
 
@@ -945,12 +945,12 @@ export default function LijecnickiPage() {
             </Field>
 
             <div style={{ gridColumn: "span 2" }}>
-              <label style={labelStyle}>Napomene</label>
+              <label style={labelStyle}>Točke liječničkog pregleda</label>
               <input
                 style={inputStyle}
                 value={forma.napomena}
                 onChange={(e) => setForma({ ...forma, napomena: e.target.value })}
-                placeholder="Napomene"
+                placeholder="Točke liječničkog pregleda"
               />
             </div>
           </div>
@@ -1005,7 +1005,7 @@ export default function LijecnickiPage() {
                   <th style={thStyle}>Datum</th>
                   <th style={thStyle}>Vrijedi do</th>
                   <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Napomene</th>
+                  <th style={thStyle}>Točke liječničkog pregleda</th>
                   <th style={thStyle}>Akcije</th>
                 </tr>
               </thead>
@@ -1106,7 +1106,7 @@ export default function LijecnickiPage() {
                 <Detalj red="Datum pregleda" value={formatDate(detalji.datum)} />
                 <Detalj red="Vrijedi do" value={formatDate(detalji.vrijediDo)} />
                 <Detalj red="Status" value={statusRoka(detalji.vrijediDo).text} />
-                <Detalj red="Napomene" value={detalji.napomena || "-"} />
+                <Detalj red="Točke liječničkog pregleda" value={detalji.napomena || "-"} />
               </div>
             </div>
           </div>
