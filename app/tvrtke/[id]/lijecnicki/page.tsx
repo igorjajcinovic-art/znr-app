@@ -69,7 +69,6 @@ export default function LijecnickiPage() {
 
   const [filterRadnik, setFilterRadnik] = useState("");
   const [filterOib, setFilterOib] = useState("");
-  const [filterVrsta, setFilterVrsta] = useState("");
   const [filterStatus, setFilterStatus] = useState("svi");
   const [filterMjesecIsteka, setFilterMjesecIsteka] = useState("svi");
 
@@ -201,11 +200,10 @@ export default function LijecnickiPage() {
     const headers = [
       "Ime i prezime",
       "OIB",
-      "Vrsta pregleda",
       "Datum pregleda",
       "Vrijedi do",
       "Status",
-      "Napomena",
+      "Napomene",
     ];
 
     const rows = filtriraniPregledi.map((p) => {
@@ -214,7 +212,6 @@ export default function LijecnickiPage() {
       return [
         radnik?.ime || "",
         p.oib,
-        p.vrsta || "",
         formatDate(p.datum),
         formatDate(p.vrijediDo),
         statusRoka(p.vrijediDo).text,
@@ -290,10 +287,9 @@ export default function LijecnickiPage() {
 
     const idxOib = indexOf("oib");
     const idxAktivan = indexOf("aktivan", "status");
-    const idxVrsta = indexOf("vrsta pregleda", "vrsta");
     const idxDatum = indexOf("datum pregleda", "datum");
     const idxVrijediDo = indexOf("vrijedi do");
-    const idxNapomena = indexOf("napomena");
+    const idxNapomena = indexOf("napomena", "napomene");
 
     return lines.slice(1).map((line) => {
       const cols = parseCsvLine(line);
@@ -303,7 +299,7 @@ export default function LijecnickiPage() {
       return {
         aktivan: get(idxAktivan),
         oib: get(idxOib),
-        vrsta: get(idxVrsta),
+        vrsta: "",
         datum: get(idxDatum),
         vrijediDo: get(idxVrijediDo),
         napomena: get(idxNapomena),
@@ -341,10 +337,10 @@ export default function LijecnickiPage() {
       return {
         aktivan: get("aktivan", "status"),
         oib: get("oib"),
-        vrsta: get("vrsta pregleda", "vrsta"),
+        vrsta: "",
         datum: get("datum pregleda", "datum"),
         vrijediDo: get("vrijedi do"),
-        napomena: get("napomena"),
+        napomena: get("napomena", "napomene"),
       };
     });
   };
@@ -561,9 +557,6 @@ export default function LijecnickiPage() {
 
       const okOib = !filterOib || p.oib.includes(filterOib);
 
-      const okVrsta =
-        !filterVrsta ||
-        (p.vrsta || "").toLowerCase().includes(filterVrsta.toLowerCase());
 
       const okMjesec =
         filterMjesecIsteka === "svi" || mjesecKey(p.vrijediDo) === filterMjesecIsteka;
@@ -574,14 +567,13 @@ export default function LijecnickiPage() {
         (filterStatus === "uskoro" && status === "warning") ||
         (filterStatus === "vazeci" && status === "ok");
 
-      return okRadnik && okOib && okVrsta && okMjesec && okStatus;
+      return okRadnik && okOib && okMjesec && okStatus;
     });
   }, [
     preglediAktivnihRadnika,
     aktivniRadnikPoOib,
     filterRadnik,
     filterOib,
-    filterVrsta,
     filterStatus,
   ]);
 
@@ -614,7 +606,7 @@ export default function LijecnickiPage() {
     const payload = {
       firmaId,
       oib: forma.oib,
-      vrsta: forma.vrsta || null,
+      vrsta: null,
       datum,
       vrijediDo,
       napomena: forma.napomena || null,
@@ -653,7 +645,7 @@ export default function LijecnickiPage() {
   const pokreniUredenje = (pregled: Pregled) => {
     setForma({
       oib: pregled.oib,
-      vrsta: pregled.vrsta || "",
+      vrsta: "",
       datum: formatDate(pregled.datum) === "-" ? "" : formatDate(pregled.datum),
       vrijediDo:
         formatDate(pregled.vrijediDo) === "-" ? "" : formatDate(pregled.vrijediDo),
@@ -763,7 +755,7 @@ export default function LijecnickiPage() {
             Datoteka treba imati barem stupce:
             <strong> OIB</strong>, <strong>Datum pregleda</strong>,
             <strong> Vrijedi do</strong>.
-            Može imati i polja Aktivan, Vrsta pregleda i Napomena. Redovi gdje
+            Može imati i polja Aktivan i Napomene. Redovi gdje
             je Aktivan NE neće se uvesti.
           </div>
 
@@ -835,8 +827,7 @@ export default function LijecnickiPage() {
                         : warningCardStyle),
                     }}
                   >
-                    <strong>{radnik?.ime || p.oib}</strong> — {p.vrsta || "Liječnički pregled"} —{" "}
-                    {formatDate(p.vrijediDo)} — {status.text}
+                    <strong>{radnik?.ime || p.oib}</strong> - {formatDate(p.vrijediDo)} - {status.text}
                   </div>
                 );
               })}
@@ -865,16 +856,6 @@ export default function LijecnickiPage() {
                 value={filterOib}
                 onChange={(e) => setFilterOib(e.target.value)}
                 placeholder="Pretraga po OIB-u"
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Vrsta pregleda</label>
-              <input
-                style={inputStyle}
-                value={filterVrsta}
-                onChange={(e) => setFilterVrsta(e.target.value)}
-                placeholder="Vrsta pregleda"
               />
             </div>
 
@@ -915,7 +896,6 @@ export default function LijecnickiPage() {
               onClick={() => {
                 setFilterRadnik("");
                 setFilterOib("");
-                setFilterVrsta("");
                 setFilterStatus("svi");
                 setFilterMjesecIsteka("svi");
               }}
@@ -946,15 +926,6 @@ export default function LijecnickiPage() {
               </select>
             </Field>
 
-            <Field label="Vrsta pregleda">
-              <input
-                style={inputStyle}
-                value={forma.vrsta}
-                onChange={(e) => setForma({ ...forma, vrsta: e.target.value })}
-                placeholder="Vrsta pregleda"
-              />
-            </Field>
-
             <Field label="Datum pregleda">
               <input
                 style={inputStyle}
@@ -974,12 +945,12 @@ export default function LijecnickiPage() {
             </Field>
 
             <div style={{ gridColumn: "span 2" }}>
-              <label style={labelStyle}>Napomena</label>
+              <label style={labelStyle}>Napomene</label>
               <input
                 style={inputStyle}
                 value={forma.napomena}
                 onChange={(e) => setForma({ ...forma, napomena: e.target.value })}
-                placeholder="Napomena"
+                placeholder="Napomene"
               />
             </div>
           </div>
@@ -1031,18 +1002,17 @@ export default function LijecnickiPage() {
                 <tr style={{ background: "#f9fafb" }}>
                   <th style={thStyle}>Ime</th>
                   <th style={thStyle}>OIB</th>
-                  <th style={thStyle}>Vrsta</th>
                   <th style={thStyle}>Datum</th>
                   <th style={thStyle}>Vrijedi do</th>
                   <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Napomena</th>
+                  <th style={thStyle}>Napomene</th>
                   <th style={thStyle}>Akcije</th>
                 </tr>
               </thead>
               <tbody>
                 {filtriraniPregledi.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={tdCenterStyle}>
+                    <td colSpan={7} style={tdCenterStyle}>
                       Nema pregleda za prikaz.
                     </td>
                   </tr>
@@ -1059,7 +1029,6 @@ export default function LijecnickiPage() {
                           </div>
                         </td>
                         <td style={tdStyle}>{p.oib}</td>
-                        <td style={tdStyle}>{p.vrsta || "-"}</td>
                         <td style={tdStyle}>{formatDate(p.datum)}</td>
                         <td style={tdStyle}>{formatDate(p.vrijediDo)}</td>
                         <td style={tdStyle}>
@@ -1134,11 +1103,10 @@ export default function LijecnickiPage() {
                   value={aktivniRadnikPoOib.get(detalji.oib)?.ime || "-"}
                 />
                 <Detalj red="OIB" value={detalji.oib} />
-                <Detalj red="Vrsta" value={detalji.vrsta || "-"} />
                 <Detalj red="Datum pregleda" value={formatDate(detalji.datum)} />
                 <Detalj red="Vrijedi do" value={formatDate(detalji.vrijediDo)} />
                 <Detalj red="Status" value={statusRoka(detalji.vrijediDo).text} />
-                <Detalj red="Napomena" value={detalji.napomena || "-"} />
+                <Detalj red="Napomene" value={detalji.napomena || "-"} />
               </div>
             </div>
           </div>
