@@ -71,6 +71,7 @@ export default function LijecnickiPage() {
   const [filterOib, setFilterOib] = useState("");
   const [filterVrsta, setFilterVrsta] = useState("");
   const [filterStatus, setFilterStatus] = useState("svi");
+  const [filterMjesecIsteka, setFilterMjesecIsteka] = useState("svi");
 
   const [ucitavanje, setUcitavanje] = useState(true);
   const [spremanje, setSpremanje] = useState(false);
@@ -169,6 +170,28 @@ export default function LijecnickiPage() {
     return value;
   };
 
+  const mjesecKey = (value: string | null) => {
+    const iso = value ? parseDate(value) : "";
+    if (!iso) return "";
+
+    const [y, m] = iso.split("-");
+    if (!y || !m) return "";
+
+    return `${y}-${m}`;
+  };
+
+  const formatMjesecLabel = (key: string) => {
+    const [y, m] = key.split("-");
+    if (!y || !m) return key;
+
+    const date = new Date(Number(y), Number(m) - 1, 1);
+    const label = date.toLocaleDateString("hr-HR", {
+      month: "long",
+      year: "numeric",
+    });
+
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
   const csvEscape = (value: string | number | boolean | null | undefined) => {
     const text = String(value ?? "");
     return `"${text.replace(/"/g, '""')}"`;
@@ -509,6 +532,17 @@ export default function LijecnickiPage() {
     [pregledi, aktivniOibSet]
   );
 
+  const mjeseciIsteka = useMemo(() => {
+    const keys = new Set<string>();
+
+    preglediAktivnihRadnika.forEach((pregled) => {
+      const key = mjesecKey(pregled.vrijediDo);
+      if (key) keys.add(key);
+    });
+
+    return [...keys].sort();
+  }, [preglediAktivnihRadnika]);
+
   const upozorenja = useMemo(() => {
     return preglediAktivnihRadnika.filter((p) => {
       const level = statusRoka(p.vrijediDo).level;
@@ -531,13 +565,16 @@ export default function LijecnickiPage() {
         !filterVrsta ||
         (p.vrsta || "").toLowerCase().includes(filterVrsta.toLowerCase());
 
+      const okMjesec =
+        filterMjesecIsteka === "svi" || mjesecKey(p.vrijediDo) === filterMjesecIsteka;
+
       const okStatus =
         filterStatus === "svi" ||
         (filterStatus === "istekli" && status === "expired") ||
         (filterStatus === "uskoro" && status === "warning") ||
         (filterStatus === "vazeci" && status === "ok");
 
-      return okRadnik && okOib && okVrsta && okStatus;
+      return okRadnik && okOib && okVrsta && okMjesec && okStatus;
     });
   }, [
     preglediAktivnihRadnika,
@@ -854,6 +891,22 @@ export default function LijecnickiPage() {
                 <option value="vazeci">Važeći</option>
               </select>
             </div>
+
+            <div>
+              <label style={labelStyle}>Mjesec isteka</label>
+              <select
+                style={inputStyle}
+                value={filterMjesecIsteka}
+                onChange={(e) => setFilterMjesecIsteka(e.target.value)}
+              >
+                <option value="svi">Svi mjeseci</option>
+                {mjeseciIsteka.map((mjesec) => (
+                  <option key={mjesec} value={mjesec}>
+                    {formatMjesecLabel(mjesec)}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div style={actionRowStyle}>
@@ -864,6 +917,7 @@ export default function LijecnickiPage() {
                 setFilterOib("");
                 setFilterVrsta("");
                 setFilterStatus("svi");
+                setFilterMjesecIsteka("svi");
               }}
             >
               Očisti filtere
@@ -1285,7 +1339,7 @@ const uploadGridStyle: React.CSSProperties = {
 
 const filterGridStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+  gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
   gap: 16,
 };
 
