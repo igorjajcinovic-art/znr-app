@@ -72,6 +72,7 @@ export async function ensureApplicationTables() {
     );
   `);
   await run(`ALTER TABLE "LijecnickiPregled" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'aktivno';`);
+  await run(`ALTER TABLE "LijecnickiPregled" ADD COLUMN IF NOT EXISTS "dodatnaNapomena" TEXT;`);
   await run(`CREATE INDEX IF NOT EXISTS "LijecnickiPregled_firmaId_idx" ON "LijecnickiPregled"("firmaId");`);
   await run(`CREATE INDEX IF NOT EXISTS "LijecnickiPregled_firmaId_oib_idx" ON "LijecnickiPregled"("firmaId", "oib");`);
   await run(`CREATE INDEX IF NOT EXISTS "LijecnickiPregled_status_idx" ON "LijecnickiPregled"("status");`);

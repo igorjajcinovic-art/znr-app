@@ -1,3 +1,4 @@
+import { ensureApplicationTables } from "@/lib/database";
 import { prisma } from "@/lib/prisma";
 import { parseHrDate } from "@/lib/dates";
 
@@ -76,6 +77,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    await ensureApplicationTables();
+
     const body = await req.json();
 
     const firmaId = String(body?.firmaId ?? "").trim();
@@ -110,6 +113,7 @@ export async function POST(req: Request) {
         vrijediDo,
         status: rokStatus(vrijediDo),
         napomena: body?.napomena ? String(body.napomena).trim() : null,
+        dodatnaNapomena: body?.dodatnaNapomena ? String(body.dodatnaNapomena).trim() : null,
       },
     });
 
@@ -122,6 +126,8 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    await ensureApplicationTables();
+
     const { searchParams } = new URL(req.url);
     const firmaId = searchParams.get("firmaId");
 

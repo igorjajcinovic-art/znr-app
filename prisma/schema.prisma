@@ -57,6 +57,7 @@ model LijecnickiPregled {
   vrijediDo  DateTime
   status     String    @default("aktivno") // aktivno, uskoro, isteklo
   napomena   String?
+  dodatnaNapomena String?
 
   tvrtka     Tvrtka    @relation(fields: [firmaId], references: [id], onDelete: Cascade)
 

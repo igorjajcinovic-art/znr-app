@@ -1,3 +1,4 @@
+import { ensureApplicationTables } from "@/lib/database";
 import { prisma } from "@/lib/prisma";
 
 type ImportRow = {
@@ -7,6 +8,7 @@ type ImportRow = {
   datum?: string | null;
   vrijediDo?: string | null;
   napomena?: string | null;
+  dodatnaNapomena?: string | null;
 };
 
 function clean(value: unknown): string {
@@ -67,6 +69,8 @@ function isExplicitInactive(value: unknown): boolean {
 
 export async function POST(req: Request) {
   try {
+    await ensureApplicationTables();
+
     const body = await req.json();
 
     const firmaId = String(body?.firmaId ?? "").trim();
@@ -90,6 +94,7 @@ export async function POST(req: Request) {
       datum: Date;
       vrijediDo: Date;
       napomena: string | null;
+      dodatnaNapomena: string | null;
     }> = [];
 
     const oibs = Array.from(
@@ -164,6 +169,7 @@ export async function POST(req: Request) {
         datum: datumSafe,
         vrijediDo: vrijediDoSafe,
         napomena: clean(row.napomena) || null,
+        dodatnaNapomena: clean(row.dodatnaNapomena) || null,
       });
     }
 

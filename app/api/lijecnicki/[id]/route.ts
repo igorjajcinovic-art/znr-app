@@ -1,3 +1,4 @@
+import { ensureApplicationTables } from "@/lib/database";
 import { prisma } from "@/lib/prisma";
 import { parseHrDate } from "@/lib/dates";
 
@@ -27,6 +28,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureApplicationTables();
+
     const { id } = await params;
 
     const zapis = await prisma.lijecnickiPregled.findUnique({
@@ -49,6 +52,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureApplicationTables();
+
     const { id } = await params;
     const body = await req.json();
 
@@ -85,6 +90,7 @@ export async function PUT(
         vrijediDo,
         status: rokStatus(vrijediDo),
         napomena: body?.napomena ? String(body.napomena).trim() : null,
+        dodatnaNapomena: body?.dodatnaNapomena ? String(body.dodatnaNapomena).trim() : null,
       },
     });
 
@@ -100,6 +106,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureApplicationTables();
+
     const { id } = await params;
 
     await prisma.lijecnickiPregled.delete({

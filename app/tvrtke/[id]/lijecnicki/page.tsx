@@ -21,6 +21,7 @@ type Pregled = {
   datum: string;
   vrijediDo: string;
   napomena: string | null;
+  dodatnaNapomena: string | null;
 };
 
 type Tvrtka = {
@@ -36,6 +37,7 @@ type FormaPregled = {
   datum: string;
   vrijediDo: string;
   napomena: string;
+  dodatnaNapomena: string;
 };
 
 type CsvImportRow = {
@@ -45,6 +47,7 @@ type CsvImportRow = {
   datum: string;
   vrijediDo: string;
   napomena: string;
+  dodatnaNapomena: string;
 };
 
 const praznaForma: FormaPregled = {
@@ -53,6 +56,7 @@ const praznaForma: FormaPregled = {
   datum: "",
   vrijediDo: "",
   napomena: "",
+  dodatnaNapomena: "",
 };
 
 export default function LijecnickiPage() {
@@ -204,6 +208,7 @@ export default function LijecnickiPage() {
       "Vrijedi do",
       "Status",
       "Točke",
+      "Napomena",
     ];
 
     const rows = filtriraniPregledi.map((p) => {
@@ -216,6 +221,7 @@ export default function LijecnickiPage() {
         formatDate(p.vrijediDo),
         statusRoka(p.vrijediDo).text,
         p.napomena || "",
+        p.dodatnaNapomena || "",
       ];
     });
 
@@ -289,7 +295,8 @@ export default function LijecnickiPage() {
     const idxAktivan = indexOf("aktivan", "status");
     const idxDatum = indexOf("datum pregleda", "datum");
     const idxVrijediDo = indexOf("vrijedi do");
-    const idxNapomena = indexOf("točke liječničkog pregleda", "tocke lijecnickog pregleda", "napomena", "napomene");
+    const idxTocke = indexOf("točke", "tocke", "točke liječničkog pregleda", "tocke lijecnickog pregleda");
+    const idxNapomena = indexOf("napomena", "napomene");
 
     return lines.slice(1).map((line) => {
       const cols = parseCsvLine(line);
@@ -302,7 +309,8 @@ export default function LijecnickiPage() {
         vrsta: "",
         datum: get(idxDatum),
         vrijediDo: get(idxVrijediDo),
-        napomena: get(idxNapomena),
+        napomena: get(idxTocke),
+        dodatnaNapomena: get(idxNapomena),
       };
     });
   };
@@ -340,7 +348,8 @@ export default function LijecnickiPage() {
         vrsta: "",
         datum: get("datum pregleda", "datum"),
         vrijediDo: get("vrijedi do"),
-        napomena: get("točke liječničkog pregleda", "tocke lijecnickog pregleda", "napomena", "napomene"),
+        napomena: get("točke", "tocke", "točke liječničkog pregleda", "tocke lijecnickog pregleda"),
+        dodatnaNapomena: get("napomena", "napomene"),
       };
     });
   };
@@ -610,6 +619,7 @@ export default function LijecnickiPage() {
       datum,
       vrijediDo,
       napomena: forma.napomena || null,
+      dodatnaNapomena: forma.dodatnaNapomena || null,
     };
 
     try {
@@ -650,6 +660,7 @@ export default function LijecnickiPage() {
       vrijediDo:
         formatDate(pregled.vrijediDo) === "-" ? "" : formatDate(pregled.vrijediDo),
       napomena: pregled.napomena || "",
+      dodatnaNapomena: pregled.dodatnaNapomena || "",
     });
     setEditId(pregled.id);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -755,7 +766,7 @@ export default function LijecnickiPage() {
             Datoteka treba imati barem stupce:
             <strong> OIB</strong>, <strong>Datum pregleda</strong>,
             <strong> Vrijedi do</strong>.
-            Može imati i polja Aktivan i Točke. Redovi gdje
+            Može imati i polja Aktivan, Točke i Napomena. Redovi gdje
             je Aktivan NE neće se uvesti.
           </div>
 
@@ -944,13 +955,23 @@ export default function LijecnickiPage() {
               />
             </Field>
 
-            <div style={{ gridColumn: "span 2" }}>
+            <div>
               <label style={labelStyle}>Točke</label>
               <input
                 style={inputStyle}
                 value={forma.napomena}
                 onChange={(e) => setForma({ ...forma, napomena: e.target.value })}
                 placeholder="Točke"
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Napomena</label>
+              <input
+                style={inputStyle}
+                value={forma.dodatnaNapomena}
+                onChange={(e) => setForma({ ...forma, dodatnaNapomena: e.target.value })}
+                placeholder="Napomena"
               />
             </div>
           </div>
@@ -1006,13 +1027,14 @@ export default function LijecnickiPage() {
                   <th style={thStyle}>Vrijedi do</th>
                   <th style={thStyle}>Status</th>
                   <th style={thStyle}>Točke</th>
+                  <th style={thStyle}>Napomena</th>
                   <th style={thStyle}>Akcije</th>
                 </tr>
               </thead>
               <tbody>
                 {filtriraniPregledi.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={tdCenterStyle}>
+                    <td colSpan={8} style={tdCenterStyle}>
                       Nema pregleda za prikaz.
                     </td>
                   </tr>
@@ -1042,6 +1064,7 @@ export default function LijecnickiPage() {
                           </span>
                         </td>
                         <td style={tdStyle}>{p.napomena || "-"}</td>
+                        <td style={tdStyle}>{p.dodatnaNapomena || "-"}</td>
                         <td style={tdStyle}>
                           <div style={tableActionsStyle}>
                             <button
@@ -1107,6 +1130,7 @@ export default function LijecnickiPage() {
                 <Detalj red="Vrijedi do" value={formatDate(detalji.vrijediDo)} />
                 <Detalj red="Status" value={statusRoka(detalji.vrijediDo).text} />
                 <Detalj red="Točke" value={detalji.napomena || "-"} />
+                <Detalj red="Napomena" value={detalji.dodatnaNapomena || "-"} />
               </div>
             </div>
           </div>

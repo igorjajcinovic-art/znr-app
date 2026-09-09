@@ -59,6 +59,7 @@ export async function GET(req: Request) {
             <td>${escapeHtml(formatDate(pregled.datum))}</td>
             <td>${escapeHtml(formatDate(pregled.vrijediDo))}</td>
             <td>${escapeHtml(pregled.napomena || "")}</td>
+            <td>${escapeHtml(pregled.dodatnaNapomena || "")}</td>
           </tr>
         `;
       })
@@ -128,12 +129,13 @@ export async function GET(req: Request) {
               <th>Datum pregleda</th>
               <th>Ističe</th>
               <th>Točke</th>
+              <th>Napomena</th>
             </tr>
           </thead>
           <tbody>
             ${
               rows ||
-              `<tr><td colspan="5">Nema liječničkih pregleda za prikaz.</td></tr>`
+              `<tr><td colspan="6">Nema liječničkih pregleda za prikaz.</td></tr>`
             }
           </tbody>
         </table>
