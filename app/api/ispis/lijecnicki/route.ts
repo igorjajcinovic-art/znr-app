@@ -127,7 +127,7 @@ export async function GET(req: Request) {
               <th>OIB</th>
               <th>Datum pregleda</th>
               <th>Ističe</th>
-              <th>Točke liječničkog pregleda</th>
+              <th>Točke</th>
             </tr>
           </thead>
           <tbody>

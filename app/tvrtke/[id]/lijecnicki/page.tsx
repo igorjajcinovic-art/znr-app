@@ -203,7 +203,7 @@ export default function LijecnickiPage() {
       "Datum pregleda",
       "Vrijedi do",
       "Status",
-      "Točke liječničkog pregleda",
+      "Točke",
     ];
 
     const rows = filtriraniPregledi.map((p) => {
@@ -755,7 +755,7 @@ export default function LijecnickiPage() {
             Datoteka treba imati barem stupce:
             <strong> OIB</strong>, <strong>Datum pregleda</strong>,
             <strong> Vrijedi do</strong>.
-            Može imati i polja Aktivan i Točke liječničkog pregleda. Redovi gdje
+            Može imati i polja Aktivan i Točke. Redovi gdje
             je Aktivan NE neće se uvesti.
           </div>
 
@@ -945,12 +945,12 @@ export default function LijecnickiPage() {
             </Field>
 
             <div style={{ gridColumn: "span 2" }}>
-              <label style={labelStyle}>Točke liječničkog pregleda</label>
+              <label style={labelStyle}>Točke</label>
               <input
                 style={inputStyle}
                 value={forma.napomena}
                 onChange={(e) => setForma({ ...forma, napomena: e.target.value })}
-                placeholder="Točke liječničkog pregleda"
+                placeholder="Točke"
               />
             </div>
           </div>
@@ -1005,7 +1005,7 @@ export default function LijecnickiPage() {
                   <th style={thStyle}>Datum</th>
                   <th style={thStyle}>Vrijedi do</th>
                   <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Točke liječničkog pregleda</th>
+                  <th style={thStyle}>Točke</th>
                   <th style={thStyle}>Akcije</th>
                 </tr>
               </thead>
@@ -1106,7 +1106,7 @@ export default function LijecnickiPage() {
                 <Detalj red="Datum pregleda" value={formatDate(detalji.datum)} />
                 <Detalj red="Vrijedi do" value={formatDate(detalji.vrijediDo)} />
                 <Detalj red="Status" value={statusRoka(detalji.vrijediDo).text} />
-                <Detalj red="Točke liječničkog pregleda" value={detalji.napomena || "-"} />
+                <Detalj red="Točke" value={detalji.napomena || "-"} />
               </div>
             </div>
           </div>
