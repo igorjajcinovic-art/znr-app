@@ -30,10 +30,17 @@ export async function ensureApplicationTables() {
       "datumOdjave" TIMESTAMP(3),
       "datumZaposlenja" TIMESTAMP(3) NOT NULL,
       "datumRodjenja" TIMESTAMP(3),
+      "spol" TEXT,
+      "drzavljanstvo" TEXT,
       "grad" TEXT,
       "ulica" TEXT,
+      "strucnoObrazovanje" TEXT,
       "radnoMjesto" TEXT,
+      "vrstaUgovora" TEXT,
+      "razlogPrestanka" TEXT,
+      "prijavaOsiguranjaDatum" TIMESTAMP(3),
       "imaDozvolu" BOOLEAN NOT NULL DEFAULT false,
+      "radnaDozvolaBroj" TEXT,
       "dozvolaDo" TIMESTAMP(3),
       "znrOsposobljen" BOOLEAN NOT NULL DEFAULT false,
       "znrDatum" TIMESTAMP(3),
@@ -46,10 +53,17 @@ export async function ensureApplicationTables() {
   await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "aktivan" BOOLEAN NOT NULL DEFAULT true;`);
   await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "datumOdjave" TIMESTAMP(3);`);
   await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "datumRodjenja" TIMESTAMP(3);`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "spol" TEXT;`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "drzavljanstvo" TEXT;`);
   await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "grad" TEXT;`);
   await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "ulica" TEXT;`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "strucnoObrazovanje" TEXT;`);
   await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "radnoMjesto" TEXT;`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "vrstaUgovora" TEXT;`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "razlogPrestanka" TEXT;`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "prijavaOsiguranjaDatum" TIMESTAMP(3);`);
   await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "imaDozvolu" BOOLEAN NOT NULL DEFAULT false;`);
+  await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "radnaDozvolaBroj" TEXT;`);
   await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "dozvolaDo" TIMESTAMP(3);`);
   await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "znrOsposobljen" BOOLEAN NOT NULL DEFAULT false;`);
   await run(`ALTER TABLE "Radnik" ADD COLUMN IF NOT EXISTS "znrDatum" TIMESTAMP(3);`);

@@ -30,10 +30,17 @@ model Radnik {
   datumOdjave      DateTime?
   datumZaposlenja  DateTime
   datumRodjenja    DateTime?
+  spol             String?
+  drzavljanstvo    String?
   grad             String?
   ulica            String?
+  strucnoObrazovanje String?
   radnoMjesto      String?
+  vrstaUgovora     String?
+  razlogPrestanka  String?
+  prijavaOsiguranjaDatum DateTime?
   imaDozvolu       Boolean   @default(false)
+  radnaDozvolaBroj String?
   dozvolaDo        DateTime?
   znrOsposobljen   Boolean   @default(false)
   znrDatum         DateTime?

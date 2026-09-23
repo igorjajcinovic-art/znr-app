@@ -4,6 +4,7 @@ import { ensureTvrtkaDirektorColumn, type TvrtkaRecord } from "@/lib/companies";
 import { ensureVatrogasniAparatiTable } from "@/lib/fire-extinguishers";
 import { ensureRadnikDokumentiTable } from "@/lib/worker-documents";
 import { ensureTvrtkaDokumentiTable } from "@/lib/company-documents";
+import { ensureRadnikKadrovskaColumns } from "@/lib/workers";
 
 type RawRow = Record<string, unknown>;
 
@@ -54,6 +55,7 @@ function backupFileName(prefix: string, naziv?: string | null) {
 export async function GET(req: Request) {
   try {
     await ensureApplicationTables();
+    await ensureRadnikKadrovskaColumns();
     await ensureTvrtkaDirektorColumn();
     await ensureRadnikDokumentiTable();
     await ensureTvrtkaDokumentiTable();

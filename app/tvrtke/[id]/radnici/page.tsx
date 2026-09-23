@@ -14,10 +14,17 @@ type Radnik = {
   datumOdjave: string | null;
   datumZaposlenja: string;
   datumRodjenja: string | null;
+  spol: string | null;
+  drzavljanstvo: string | null;
   grad: string | null;
   ulica: string | null;
+  strucnoObrazovanje: string | null;
   radnoMjesto: string | null;
+  vrstaUgovora: string | null;
+  razlogPrestanka: string | null;
+  prijavaOsiguranjaDatum: string | null;
   imaDozvolu: boolean;
+  radnaDozvolaBroj: string | null;
   dozvolaDo: string | null;
   znrOsposobljen: boolean;
   znrDatum: string | null;
@@ -65,10 +72,17 @@ type FormaRadnik = {
   datumOdjave: string;
   datumZaposlenja: string;
   datumRodjenja: string;
+  spol: string;
+  drzavljanstvo: string;
   grad: string;
   ulica: string;
+  strucnoObrazovanje: string;
   radnoMjesto: string;
+  vrstaUgovora: string;
+  razlogPrestanka: string;
+  prijavaOsiguranjaDatum: string;
   imaDozvolu: boolean;
+  radnaDozvolaBroj: string;
   dozvolaDo: string;
   znrOsposobljen: boolean;
   znrDatum: string;
@@ -102,10 +116,17 @@ const prazni: FormaRadnik = {
   datumOdjave: "",
   datumZaposlenja: "",
   datumRodjenja: "",
+  spol: "",
+  drzavljanstvo: "",
   grad: "",
   ulica: "",
+  strucnoObrazovanje: "",
   radnoMjesto: "",
+  vrstaUgovora: "",
+  razlogPrestanka: "",
+  prijavaOsiguranjaDatum: "",
   imaDozvolu: false,
+  radnaDozvolaBroj: "",
   dozvolaDo: "",
   znrOsposobljen: false,
   znrDatum: "",
@@ -873,6 +894,7 @@ const importCsv = async () => {
     const datumZaposlenja = parseDate(forma.datumZaposlenja);
     const datumRodjenja = parseDate(forma.datumRodjenja);
     const datumOdjave = parseDate(forma.datumOdjave);
+    const prijavaOsiguranjaDatum = parseDate(forma.prijavaOsiguranjaDatum);
     const dozvolaDo = parseDate(forma.dozvolaDo);
     const znrDatum = parseDate(forma.znrDatum);
     const zopDatum = parseDate(forma.zopDatum);
@@ -889,6 +911,11 @@ const importCsv = async () => {
 
     if (!forma.aktivan && forma.datumOdjave && !datumOdjave) {
       alert("Datum odjave mora biti u obliku dd.mm.gggg");
+      return;
+    }
+
+    if (forma.prijavaOsiguranjaDatum && !prijavaOsiguranjaDatum) {
+      alert("Datum prijave osiguranja mora biti u obliku dd.mm.gggg");
       return;
     }
 
@@ -915,10 +942,19 @@ const importCsv = async () => {
       datumOdjave: forma.aktivan ? null : datumOdjave || null,
       datumZaposlenja,
       datumRodjenja: datumRodjenja || null,
+      spol: forma.spol || null,
+      drzavljanstvo: forma.drzavljanstvo.trim() || null,
       grad: forma.grad.trim() || null,
       ulica: forma.ulica.trim() || null,
+      strucnoObrazovanje: forma.strucnoObrazovanje.trim() || null,
       radnoMjesto: forma.radnoMjesto.trim() || null,
+      vrstaUgovora: forma.vrstaUgovora || null,
+      razlogPrestanka: forma.aktivan ? null : forma.razlogPrestanka.trim() || null,
+      prijavaOsiguranjaDatum: prijavaOsiguranjaDatum || null,
       imaDozvolu: forma.imaDozvolu,
+      radnaDozvolaBroj: forma.imaDozvolu
+        ? forma.radnaDozvolaBroj.trim() || null
+        : null,
       dozvolaDo: forma.imaDozvolu ? dozvolaDo || null : null,
       znrOsposobljen: forma.znrOsposobljen,
       znrDatum: forma.znrOsposobljen ? znrDatum || null : null,
@@ -977,10 +1013,20 @@ const importCsv = async () => {
         formatDate(radnik.datumRodjenja) === "-"
           ? ""
           : formatDate(radnik.datumRodjenja),
+      spol: radnik.spol || "",
+      drzavljanstvo: radnik.drzavljanstvo || "",
       grad: radnik.grad || "",
       ulica: radnik.ulica || "",
+      strucnoObrazovanje: radnik.strucnoObrazovanje || "",
       radnoMjesto: radnik.radnoMjesto || "",
+      vrstaUgovora: radnik.vrstaUgovora || "",
+      razlogPrestanka: radnik.razlogPrestanka || "",
+      prijavaOsiguranjaDatum:
+        formatDate(radnik.prijavaOsiguranjaDatum) === "-"
+          ? ""
+          : formatDate(radnik.prijavaOsiguranjaDatum),
       imaDozvolu: radnik.imaDozvolu,
+      radnaDozvolaBroj: radnik.radnaDozvolaBroj || "",
       dozvolaDo:
         formatDate(radnik.dozvolaDo) === "-" ? "" : formatDate(radnik.dozvolaDo),
       znrOsposobljen: radnik.znrOsposobljen,
@@ -1395,6 +1441,28 @@ const importCsv = async () => {
               />
             </Field>
 
+            <Field label="Spol">
+              <select
+                style={inputStyle}
+                value={forma.spol}
+                onChange={(e) => setForma({ ...forma, spol: e.target.value })}
+              >
+                <option value="">Nije uneseno</option>
+                <option value="M">Muški</option>
+                <option value="Ž">Ženski</option>
+              </select>
+            </Field>
+
+            <Field label="Državljanstvo">
+              <input
+                style={inputStyle}
+                value={forma.drzavljanstvo}
+                onChange={(e) =>
+                  setForma({ ...forma, drzavljanstvo: e.target.value })
+                }
+              />
+            </Field>
+
             <Field label="Grad / mjesto">
               <input
                 style={inputStyle}
@@ -1416,6 +1484,17 @@ const importCsv = async () => {
               />
             </Field>
 
+            <Field label="Stručno obrazovanje">
+              <input
+                style={inputStyle}
+                value={forma.strucnoObrazovanje}
+                onChange={(e) =>
+                  setForma({ ...forma, strucnoObrazovanje: e.target.value })
+                }
+                placeholder="npr. SSS, VŠS, VSS"
+              />
+            </Field>
+
             <Field label="Radno mjesto">
               <input
                 style={inputStyle}
@@ -1426,6 +1505,33 @@ const importCsv = async () => {
                     radnoMjesto: e.target.value,
                   })
                 }
+              />
+            </Field>
+
+            <Field label="Vrsta ugovora">
+              <select
+                style={inputStyle}
+                value={forma.vrstaUgovora}
+                onChange={(e) =>
+                  setForma({ ...forma, vrstaUgovora: e.target.value })
+                }
+              >
+                <option value="">Nije uneseno</option>
+                <option value="Neodređeno">Neodređeno</option>
+                <option value="Određeno">Određeno</option>
+                <option value="Sezonski">Sezonski</option>
+                <option value="Drugo">Drugo</option>
+              </select>
+            </Field>
+
+            <Field label="Datum prijave osiguranja">
+              <input
+                style={inputStyle}
+                value={forma.prijavaOsiguranjaDatum}
+                onChange={(e) =>
+                  setForma({ ...forma, prijavaOsiguranjaDatum: e.target.value })
+                }
+                placeholder="dd.mm.gggg"
               />
             </Field>
 
@@ -1446,19 +1552,30 @@ const importCsv = async () => {
             </Field>
 
             {!forma.aktivan && (
-              <Field label="Datum odjave">
-                <input
-                  style={inputStyle}
-                  value={forma.datumOdjave}
-                  onChange={(e) =>
-                    setForma({
-                      ...forma,
-                      datumOdjave: e.target.value,
-                    })
-                  }
-                  placeholder="dd.mm.gggg"
-                />
-              </Field>
+              <>
+                <Field label="Datum odjave">
+                  <input
+                    style={inputStyle}
+                    value={forma.datumOdjave}
+                    onChange={(e) =>
+                      setForma({
+                        ...forma,
+                        datumOdjave: e.target.value,
+                      })
+                    }
+                    placeholder="dd.mm.gggg"
+                  />
+                </Field>
+                <Field label="Razlog prestanka rada">
+                  <input
+                    style={inputStyle}
+                    value={forma.razlogPrestanka}
+                    onChange={(e) =>
+                      setForma({ ...forma, razlogPrestanka: e.target.value })
+                    }
+                  />
+                </Field>
+              </>
             )}
 
             <Field label="Ima radnu dozvolu">
@@ -1478,19 +1595,30 @@ const importCsv = async () => {
             </Field>
 
             {forma.imaDozvolu && (
-              <Field label="Radna dozvola do">
-                <input
-                  style={inputStyle}
-                  value={forma.dozvolaDo}
-                  onChange={(e) =>
-                    setForma({
-                      ...forma,
-                      dozvolaDo: e.target.value,
-                    })
-                  }
-                  placeholder="dd.mm.gggg"
-                />
-              </Field>
+              <>
+                <Field label="Broj radne dozvole">
+                  <input
+                    style={inputStyle}
+                    value={forma.radnaDozvolaBroj}
+                    onChange={(e) =>
+                      setForma({ ...forma, radnaDozvolaBroj: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field label="Radna dozvola do">
+                  <input
+                    style={inputStyle}
+                    value={forma.dozvolaDo}
+                    onChange={(e) =>
+                      setForma({
+                        ...forma,
+                        dozvolaDo: e.target.value,
+                      })
+                    }
+                    placeholder="dd.mm.gggg"
+                  />
+                </Field>
+              </>
             )}
 
             <Field label="Osposobljen iz zaštite na radu">

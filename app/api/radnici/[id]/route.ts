@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { parseHrDate } from "@/lib/dates";
 import { recordAuditLog } from "@/lib/audit";
 import { getCurrentUser } from "@/lib/server-auth";
+import { ensureRadnikKadrovskaColumns } from "@/lib/workers";
 
 function parseBool(value: unknown): boolean {
   if (typeof value === "boolean") return value;
@@ -18,6 +19,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureRadnikKadrovskaColumns();
     const user = await getCurrentUser(req);
     const { id } = await params;
     const body = await req.json();
@@ -51,6 +53,7 @@ export async function PUT(
 
     const datumOdjave = aktivan ? null : parseHrDate(body?.datumOdjave);
     const datumRodjenja = parseHrDate(body?.datumRodjenja);
+    const prijavaOsiguranjaDatum = parseHrDate(body?.prijavaOsiguranjaDatum);
     const imaDozvolu = parseBool(body?.imaDozvolu);
     const dozvolaDo = imaDozvolu ? parseHrDate(body?.dozvolaDo) : null;
     const znrOsposobljen = parseBool(body?.znrOsposobljen);
@@ -85,10 +88,23 @@ export async function PUT(
           datumOdjave,
           datumZaposlenja,
           datumRodjenja,
+          spol: body?.spol ? String(body.spol).trim() : null,
+          drzavljanstvo: body?.drzavljanstvo ? String(body.drzavljanstvo).trim() : null,
           grad: body?.grad ? String(body.grad).trim() : null,
           ulica,
+          strucnoObrazovanje: body?.strucnoObrazovanje
+            ? String(body.strucnoObrazovanje).trim()
+            : null,
           radnoMjesto: body?.radnoMjesto ? String(body.radnoMjesto).trim() : null,
+          vrstaUgovora: body?.vrstaUgovora ? String(body.vrstaUgovora).trim() : null,
+          razlogPrestanka: aktivan || !body?.razlogPrestanka
+            ? null
+            : String(body.razlogPrestanka).trim(),
+          prijavaOsiguranjaDatum,
           imaDozvolu,
+          radnaDozvolaBroj: imaDozvolu && body?.radnaDozvolaBroj
+            ? String(body.radnaDozvolaBroj).trim()
+            : null,
           dozvolaDo,
           znrOsposobljen,
           znrDatum,

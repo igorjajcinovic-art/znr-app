@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { parseHrDate } from "@/lib/dates";
 import { recordAuditLog } from "@/lib/audit";
 import { getCurrentUser } from "@/lib/server-auth";
+import { ensureRadnikKadrovskaColumns } from "@/lib/workers";
 
 function parseBool(value: unknown): boolean {
   if (typeof value === "boolean") return value;
@@ -19,6 +20,7 @@ function parseBool(value: unknown): boolean {
 
 export async function GET(req: Request) {
   try {
+    await ensureRadnikKadrovskaColumns();
     const { searchParams } = new URL(req.url);
     const firmaId = searchParams.get("firmaId");
 
@@ -44,6 +46,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    await ensureRadnikKadrovskaColumns();
     const user = await getCurrentUser(req);
     const body = await req.json();
 
@@ -55,6 +58,7 @@ export async function POST(req: Request) {
 
     const datumZaposlenja = parseHrDate(body?.datumZaposlenja);
     const datumRodjenja = parseHrDate(body?.datumRodjenja);
+    const prijavaOsiguranjaDatum = parseHrDate(body?.prijavaOsiguranjaDatum);
     const datumOdjave = aktivan ? null : parseHrDate(body?.datumOdjave);
 
     const imaDozvolu = parseBool(body?.imaDozvolu);
@@ -103,12 +107,25 @@ export async function POST(req: Request) {
           datumOdjave,
           datumZaposlenja,
           datumRodjenja,
+          spol: body?.spol ? String(body.spol).trim() : null,
+          drzavljanstvo: body?.drzavljanstvo ? String(body.drzavljanstvo).trim() : null,
           grad: body?.grad ? String(body.grad).trim() : null,
           ulica,
+          strucnoObrazovanje: body?.strucnoObrazovanje
+            ? String(body.strucnoObrazovanje).trim()
+            : null,
           radnoMjesto: body?.radnoMjesto
             ? String(body.radnoMjesto).trim()
             : null,
+          vrstaUgovora: body?.vrstaUgovora ? String(body.vrstaUgovora).trim() : null,
+          razlogPrestanka: aktivan || !body?.razlogPrestanka
+            ? null
+            : String(body.razlogPrestanka).trim(),
+          prijavaOsiguranjaDatum,
           imaDozvolu,
+          radnaDozvolaBroj: imaDozvolu && body?.radnaDozvolaBroj
+            ? String(body.radnaDozvolaBroj).trim()
+            : null,
           dozvolaDo,
           znrOsposobljen,
           znrDatum,
