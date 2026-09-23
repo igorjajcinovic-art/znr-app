@@ -12,9 +12,16 @@ type Radnik = {
   datumOdjave: string | null;
   datumZaposlenja: string;
   datumRodjenja: string | null;
+  spol: string | null;
+  drzavljanstvo: string | null;
   grad: string | null;
+  ulica: string | null;
+  strucnoObrazovanje: string | null;
   radnoMjesto: string | null;
+  vrstaUgovora: string | null;
+  prijavaOsiguranjaDatum: string | null;
   imaDozvolu: boolean;
+  radnaDozvolaBroj: string | null;
   dozvolaDo: string | null;
   znrOsposobljen: boolean;
   znrDatum: string | null;
@@ -164,8 +171,8 @@ export default function SviRadniciPage() {
               <div style={heroBadgeStyle}>Globalni pregled</div>
               <h1 style={heroTitleStyle}>Svi radnici</h1>
               <div style={heroTextStyle}>
-                Pregled svih radnika iz svih tvrtki s brzim filterima i linkom
-                na povijest po OIB-u.
+                Pregled zajedničkih ZNR i kadrovskih podataka s izravnim
+                otvaranjem uređivanja radnika.
               </div>
             </div>
 
@@ -276,6 +283,9 @@ export default function SviRadniciPage() {
                   <th style={thStyle}>OIB</th>
                   <th style={thStyle}>Tvrtka</th>
                   <th style={thStyle}>Radno mjesto</th>
+                  <th style={thStyle}>Adresa</th>
+                  <th style={thStyle}>Vrsta ugovora</th>
+                  <th style={thStyle}>Radna dozvola</th>
                   <th style={thStyle}>Početak rada</th>
                   <th style={thStyle}>Akcije</th>
                 </tr>
@@ -283,7 +293,7 @@ export default function SviRadniciPage() {
               <tbody>
                 {filtriraniRadnici.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={tdCenterStyle}>
+                    <td colSpan={10} style={tdCenterStyle}>
                       Nema radnika za prikaz.
                     </td>
                   </tr>
@@ -308,14 +318,23 @@ export default function SviRadniciPage() {
                       <td style={tdStyle}>{r.oib}</td>
                       <td style={tdStyle}>{getNazivTvrtke(r.firmaId)}</td>
                       <td style={tdStyle}>{r.radnoMjesto || "-"}</td>
+                      <td style={tdStyle}>
+                        {[r.ulica, r.grad].filter(Boolean).join(", ") || "-"}
+                      </td>
+                      <td style={tdStyle}>{r.vrstaUgovora || "-"}</td>
+                      <td style={tdStyle}>
+                        {r.imaDozvolu
+                          ? `${r.radnaDozvolaBroj || "Bez broja"} · do ${formatDate(r.dozvolaDo)}`
+                          : "Nema"}
+                      </td>
                       <td style={tdStyle}>{formatDate(r.datumZaposlenja)}</td>
                       <td style={tdStyle}>
                         <div style={tableActionsStyle}>
                           <Link
-                            href={`/tvrtke/${r.firmaId}/radnici`}
+                            href={`/tvrtke/${r.firmaId}/radnici?uredi=${r.id}`}
                             style={smallDarkLinkStyle}
                           >
-                            Otvori tvrtku
+                            Uredi podatke
                           </Link>
                           <Link
                             href={`/radnici/povijest/${encodeURIComponent(r.oib)}`}

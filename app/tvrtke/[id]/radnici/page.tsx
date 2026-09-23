@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 
@@ -136,6 +136,7 @@ const prazni: FormaRadnik = {
 
 export default function RadniciTvrtkePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const firmaIdRaw = Array.isArray(params.id) ? params.id[0] : params.id;
   const firmaId = String(firmaIdRaw ?? "");
 
@@ -1040,6 +1041,13 @@ const importCsv = async () => {
     setEditId(radnik.id);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  useEffect(() => {
+    const radnikId = searchParams.get("uredi");
+    if (!radnikId || editId || radnici.length === 0) return;
+    const radnik = radnici.find((item) => item.id === radnikId);
+    if (radnik) pokreniUredenje(radnik);
+  }, [searchParams, radnici, editId]);
 
   const odustani = () => {
     setForma(prazni);

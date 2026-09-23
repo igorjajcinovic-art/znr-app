@@ -24,15 +24,16 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const firmaId = searchParams.get("firmaId");
 
-    if (!firmaId) {
-      return new Response("Nedostaje firmaId.", { status: 400 });
-    }
-
-    const radnici = await prisma.$queryRaw`
-      SELECT * FROM "Radnik"
-      WHERE "firmaId" = ${firmaId}
-      ORDER BY "ime" ASC
-    `;
+    const radnici = firmaId
+      ? await prisma.$queryRaw`
+          SELECT * FROM "Radnik"
+          WHERE "firmaId" = ${firmaId}
+          ORDER BY "ime" ASC
+        `
+      : await prisma.$queryRaw`
+          SELECT * FROM "Radnik"
+          ORDER BY "ime" ASC
+        `;
 
     return Response.json(radnici);
   } catch (error) {
