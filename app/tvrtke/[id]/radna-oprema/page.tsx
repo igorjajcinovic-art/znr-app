@@ -73,6 +73,7 @@ export default function RadnaOpremaPage() {
   const [ucitavanje, setUcitavanje] = useState(true);
   const [spremanje, setSpremanje] = useState(false);
   const [importanje, setImportanje] = useState(false);
+  const [dodjeljivanjeBrojeva, setDodjeljivanjeBrojeva] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -393,6 +394,7 @@ export default function RadnaOpremaPage() {
   );
 
   const ukupno = items.length;
+  const bezInventarnogBroja = items.filter((i) => !i.inventarniBroj?.trim()).length;
   const aktivno = items.filter((i) => i.status === "aktivno").length;
   const neispravno = items.filter((i) => i.status === "neispravno").length;
   const servisUpozorenja = items.filter((i) => {
@@ -403,6 +405,26 @@ export default function RadnaOpremaPage() {
   const resetForme = () => {
     setForma(praznaForma);
     setEditId(null);
+  };
+
+  const dodijeliInventarneBrojeve = async () => {
+    try {
+      setDodjeljivanjeBrojeva(true);
+      setGreska("");
+      const res = await fetch("/api/radna-oprema/inventarni-brojevi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firmaId }),
+      });
+      if (!res.ok) throw new Error(await res.text() || "Ne mogu dodijeliti inventarne brojeve.");
+      const result = await res.json();
+      alert(`Dodijeljeno inventarnih brojeva: ${result.assigned}`);
+      await ucitajSve();
+    } catch (err) {
+      setGreska(err instanceof Error ? err.message : "Greška pri dodjeli brojeva.");
+    } finally {
+      setDodjeljivanjeBrojeva(false);
+    }
   };
 
   const spremi = async () => {
@@ -553,6 +575,18 @@ export default function RadnaOpremaPage() {
           </div>
 
           <div style={heroActionsStyle}>
+            {bezInventarnogBroja > 0 ? (
+              <button
+                type="button"
+                onClick={dodijeliInventarneBrojeve}
+                disabled={dodjeljivanjeBrojeva}
+                style={secondaryButtonStyle}
+              >
+                {dodjeljivanjeBrojeva
+                  ? "Dodjeljujem..."
+                  : `Dodijeli inventarne brojeve (${bezInventarnogBroja})`}
+              </button>
+            ) : null}
             <a
               href={`/api/radna-oprema/export?firmaId=${firmaId}`}
               style={secondaryActionStyle}
@@ -694,18 +728,16 @@ export default function RadnaOpremaPage() {
             </div>
 
             <div>
-              <label style={labelStyle}>Inventarni broj</label>
+              <label style={labelStyle}>Interni inventarni broj</label>
               <input
                 value={forma.inventarniBroj}
-                onChange={(e) =>
-                  setForma((prev) => ({
-                    ...prev,
-                    inventarniBroj: e.target.value,
-                  }))
-                }
-                placeholder="Interni inventarni broj"
-                style={inputStyle}
+                readOnly
+                placeholder={editId ? "Broj će biti dodijeljen pri spremanju" : "Dodjeljuje se automatski"}
+                style={{ ...inputStyle, background: "#f3f4f6", color: "#374151" }}
               />
+              <div style={{ marginTop: 6, color: "#6b7280", fontSize: 12 }}>
+                Aplikacija automatski dodjeljuje sljedeći slobodan broj.
+              </div>
             </div>
 
             <div>

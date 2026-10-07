@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { parseHrDate } from "@/lib/dates";
+import { nextInventoryNumber } from "@/lib/work-equipment-inventory";
 
 async function syncPlanerForStroj(input: {
   zapisId: string;
@@ -90,6 +91,10 @@ export async function POST(req: Request) {
     const datumServisa = parseHrDate(body?.datumServisa);
     const sljedeciServis = parseHrDate(body?.sljedeciServis);
 
+    const inventarniBroj = body?.inventarniBroj
+      ? String(body.inventarniBroj).trim()
+      : await nextInventoryNumber();
+
     const zapis = await prisma.radnaOprema.create({
       data: {
         firmaId,
@@ -98,9 +103,7 @@ export async function POST(req: Request) {
         serijskiBroj: body?.serijskiBroj
           ? String(body.serijskiBroj).trim()
           : null,
-        inventarniBroj: body?.inventarniBroj
-          ? String(body.inventarniBroj).trim()
-          : null,
+        inventarniBroj,
         proizvodjac: body?.proizvodjac
           ? String(body.proizvodjac).trim()
           : null,

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { nextInventoryNumber } from "@/lib/work-equipment-inventory";
 
 type ImportRow = {
   naziv?: string | null;
@@ -85,6 +86,10 @@ export async function POST(req: Request) {
           ? statusRaw
           : "aktivno";
 
+      const inventarniBroj = row.inventarniBroj
+        ? String(row.inventarniBroj).trim()
+        : await nextInventoryNumber();
+
       await prisma.radnaOprema.create({
         data: {
           firmaId,
@@ -93,9 +98,7 @@ export async function POST(req: Request) {
           serijskiBroj: row.serijskiBroj
             ? String(row.serijskiBroj).trim()
             : null,
-          inventarniBroj: row.inventarniBroj
-            ? String(row.inventarniBroj).trim()
-            : null,
+          inventarniBroj,
           proizvodjac: row.proizvodjac
             ? String(row.proizvodjac).trim()
             : null,

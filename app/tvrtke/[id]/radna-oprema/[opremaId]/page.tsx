@@ -246,6 +246,23 @@ export default function RadnaOpremaDetaljiPage() {
 
   return (
     <div style={pageStyle}>
+      <style jsx global>{`
+        @media print {
+          @page { size: 60mm 40mm; margin: 0; }
+          body * { visibility: hidden !important; }
+          .machine-inventory-label, .machine-inventory-label * { visibility: visible !important; }
+          .machine-inventory-label {
+            position: fixed !important;
+            inset: 0 auto auto 0 !important;
+            width: 60mm !important;
+            height: 40mm !important;
+            margin: 0 !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+          }
+        }
+      `}</style>
       <div style={containerStyle}>
         <div style={{ marginBottom: 16 }}>
           <Link href={`/tvrtke/${firmaId}/radna-oprema`} style={backLinkStyle}>
@@ -290,38 +307,35 @@ export default function RadnaOpremaDetaljiPage() {
           </div>
 
           <div style={cardStyle}>
-            <h2 style={sectionTitleStyle}>QR kod</h2>
+            <h2 style={sectionTitleStyle}>Inventarna naljepnica</h2>
 
             <p style={mutedTextStyle}>
-              Skeniranjem ovog QR koda otvara se stranica s podacima o ovom stroju.
+              Naljepnica je pripremljena za ispis u veličini 60 × 40 mm. QR kod otvara podatke o stroju.
             </p>
 
-            {qrUrl ? (
-              <div style={{ textAlign: "center" }}>
+            <div className="machine-inventory-label" style={inventoryLabelStyle}>
+              {qrUrl ? (
                 <img
                   src={qrUrl}
                   alt="QR kod stroja"
-                  style={{ width: 240, height: 240, borderRadius: 12 }}
+                  style={inventoryQrStyle}
                 />
+              ) : null}
+              <div style={inventoryLabelTextStyle}>
+                <div style={inventoryAppStyle}>ZNR APLIKACIJA</div>
+                <div style={inventoryNumberStyle}>{item.inventarniBroj || "BEZ BROJA"}</div>
+                <div style={inventoryNameStyle}>{item.naziv}</div>
+                <div style={inventorySerialStyle}>Tvornički broj: {item.serijskiBroj || "-"}</div>
               </div>
-            ) : null}
-
-            <div style={{ marginTop: 16 }}>
-              <div style={labelStyle}>Link za QR</div>
-              <div style={linkBoxStyle}>{detaljUrl || "-"}</div>
             </div>
 
             <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <a href={qrUrl} target="_blank" style={primaryLinkStyle}>
-                Otvori QR sliku
-              </a>
-
               <button
                 type="button"
                 onClick={() => window.print()}
-                style={secondaryButtonStyle}
+                style={primaryButtonStyle}
               >
-                Ispis
+                Ispiši naljepnicu
               </button>
             </div>
           </div>
@@ -624,13 +638,61 @@ const mutedTextStyle: React.CSSProperties = {
   marginBottom: 16,
 };
 
-const linkBoxStyle: React.CSSProperties = {
-  background: "#f9fafb",
-  border: "1px solid #e5e7eb",
-  borderRadius: 12,
-  padding: 12,
-  wordBreak: "break-all",
+const inventoryLabelStyle: React.CSSProperties = {
+  width: "60mm",
+  height: "40mm",
+  maxWidth: "100%",
+  margin: "0 auto",
+  padding: "4mm",
+  border: "1px solid #111827",
+  borderRadius: 8,
+  background: "white",
+  display: "grid",
+  gridTemplateColumns: "27mm minmax(0, 1fr)",
+  gap: "3mm",
+  alignItems: "center",
+  boxSizing: "border-box",
+  overflow: "hidden",
+};
+
+const inventoryQrStyle: React.CSSProperties = {
+  width: "27mm",
+  height: "27mm",
+  display: "block",
+};
+
+const inventoryLabelTextStyle: React.CSSProperties = {
+  minWidth: 0,
   color: "#111827",
+  lineHeight: 1.15,
+};
+
+const inventoryAppStyle: React.CSSProperties = {
+  fontSize: 7,
+  fontWeight: 800,
+  marginBottom: 5,
+};
+
+const inventoryNumberStyle: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 900,
+  overflowWrap: "anywhere",
+  marginBottom: 5,
+};
+
+const inventoryNameStyle: React.CSSProperties = {
+  fontSize: 9,
+  fontWeight: 700,
+  overflow: "hidden",
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
+  marginBottom: 5,
+};
+
+const inventorySerialStyle: React.CSSProperties = {
+  fontSize: 7,
+  overflowWrap: "anywhere",
 };
 
 const uploadGridStyle: React.CSSProperties = {
@@ -653,16 +715,6 @@ const inputStyle: React.CSSProperties = {
 const primaryButtonStyle: React.CSSProperties = {
   background: "#111827",
   color: "white",
-  border: "none",
-  borderRadius: 10,
-  padding: "11px 16px",
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const secondaryButtonStyle: React.CSSProperties = {
-  background: "#e5e7eb",
-  color: "#111827",
   border: "none",
   borderRadius: 10,
   padding: "11px 16px",

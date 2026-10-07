@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { parseHrDate } from "@/lib/dates";
+import { nextInventoryNumber } from "@/lib/work-equipment-inventory";
 
 async function syncPlanerForStroj(input: {
   zapisId: string;
@@ -109,6 +110,12 @@ export async function PUT(
     const datumNabave = parseHrDate(body?.datumNabave);
     const datumServisa = parseHrDate(body?.datumServisa);
     const sljedeciServis = parseHrDate(body?.sljedeciServis);
+    const existing = await prisma.radnaOprema.findUnique({
+      where: { id },
+      select: { inventarniBroj: true },
+    });
+    if (!existing) return new Response("Zapis nije pronađen.", { status: 404 });
+    const inventarniBroj = existing.inventarniBroj || await nextInventoryNumber();
 
     const zapis = await prisma.radnaOprema.update({
       where: { id },
@@ -119,9 +126,7 @@ export async function PUT(
         serijskiBroj: body?.serijskiBroj
           ? String(body.serijskiBroj).trim()
           : null,
-        inventarniBroj: body?.inventarniBroj
-          ? String(body.inventarniBroj).trim()
-          : null,
+        inventarniBroj,
         proizvodjac: body?.proizvodjac
           ? String(body.proizvodjac).trim()
           : null,
