@@ -240,16 +240,16 @@ export default function RadnaOpremaDetaljiPage() {
     popup.document.write(`<!doctype html>
       <html lang="hr"><head><meta charset="utf-8"><title>${escapeHtml(item.inventarniBroj || "Inventarna naljepnica")}</title>
       <style>
-        @page { size: 60mm 40mm; margin: 0; }
+        @page { size: 90mm 60mm; margin: 0; }
         * { box-sizing: border-box; }
-        html, body { margin: 0; width: 60mm; height: 40mm; overflow: hidden; font-family: Arial, sans-serif; background: white; }
-        .label { width: 60mm; height: 40mm; padding: 4mm; display: grid; grid-template-columns: 27mm minmax(0, 1fr); gap: 3mm; align-items: center; overflow: hidden; color: #111827; }
-        .qr { width: 27mm; height: 27mm; display: block; }
+        html, body { margin: 0; width: 90mm; height: 60mm; overflow: hidden; font-family: Arial, sans-serif; background: white; }
+        .label { width: 90mm; height: 60mm; padding: 5mm; display: grid; grid-template-columns: 43mm minmax(0, 1fr); gap: 5mm; align-items: center; overflow: hidden; color: #111827; border: 0.5mm solid #111827; }
+        .qr { width: 43mm; height: 43mm; display: block; }
         .text { min-width: 0; line-height: 1.15; }
-        .app { font-size: 7pt; font-weight: 800; margin-bottom: 2mm; }
-        .number { font-size: 15pt; font-weight: 900; overflow-wrap: anywhere; margin-bottom: 1.5mm; }
-        .name { font-size: 8pt; font-weight: 700; max-height: 7mm; overflow: hidden; margin-bottom: 1.5mm; }
-        .serial { font-size: 6pt; overflow-wrap: anywhere; }
+        .app { font-size: 9pt; font-weight: 800; margin-bottom: 3mm; }
+        .number { font-size: 23pt; font-weight: 900; overflow-wrap: anywhere; margin-bottom: 2mm; }
+        .name { font-size: 11pt; font-weight: 700; max-height: 11mm; overflow: hidden; margin-bottom: 2mm; }
+        .serial { font-size: 8pt; overflow-wrap: anywhere; }
         @media screen { body { border: 1px solid #d1d5db; } }
       </style></head><body>
       <div class="label">
@@ -341,7 +341,7 @@ export default function RadnaOpremaDetaljiPage() {
             <h2 style={sectionTitleStyle}>Inventarna naljepnica</h2>
 
             <p style={mutedTextStyle}>
-              Naljepnica je pripremljena za ispis u veličini 60 × 40 mm. QR kod otvara podatke o stroju.
+              Naljepnica je pripremljena za ispis u veličini 90 × 60 mm. QR kod otvara podatke o stroju.
             </p>
 
             <div className="machine-inventory-label" style={inventoryLabelStyle}>
@@ -670,25 +670,25 @@ const mutedTextStyle: React.CSSProperties = {
 };
 
 const inventoryLabelStyle: React.CSSProperties = {
-  width: "60mm",
-  height: "40mm",
+  width: "90mm",
+  height: "60mm",
   maxWidth: "100%",
   margin: "0 auto",
-  padding: "4mm",
+  padding: "5mm",
   border: "1px solid #111827",
   borderRadius: 8,
   background: "white",
   display: "grid",
-  gridTemplateColumns: "27mm minmax(0, 1fr)",
-  gap: "3mm",
+  gridTemplateColumns: "43mm minmax(0, 1fr)",
+  gap: "5mm",
   alignItems: "center",
   boxSizing: "border-box",
   overflow: "hidden",
 };
 
 const inventoryQrStyle: React.CSSProperties = {
-  width: "27mm",
-  height: "27mm",
+  width: "43mm",
+  height: "43mm",
   display: "block",
 };
 
@@ -699,20 +699,20 @@ const inventoryLabelTextStyle: React.CSSProperties = {
 };
 
 const inventoryAppStyle: React.CSSProperties = {
-  fontSize: 7,
+  fontSize: 10,
   fontWeight: 800,
   marginBottom: 5,
 };
 
 const inventoryNumberStyle: React.CSSProperties = {
-  fontSize: 18,
+  fontSize: 28,
   fontWeight: 900,
   overflowWrap: "anywhere",
   marginBottom: 5,
 };
 
 const inventoryNameStyle: React.CSSProperties = {
-  fontSize: 9,
+  fontSize: 13,
   fontWeight: 700,
   overflow: "hidden",
   display: "-webkit-box",
@@ -722,7 +722,7 @@ const inventoryNameStyle: React.CSSProperties = {
 };
 
 const inventorySerialStyle: React.CSSProperties = {
-  fontSize: 7,
+  fontSize: 10,
   overflowWrap: "anywhere",
 };
 
