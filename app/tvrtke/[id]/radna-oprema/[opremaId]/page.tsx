@@ -32,6 +32,16 @@ type Dokument = {
   updatedAt: string;
 };
 
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[character] || character);
+}
+
 export default function RadnaOpremaDetaljiPage() {
   const params = useParams();
   const firmaIdRaw = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -218,6 +228,44 @@ export default function RadnaOpremaDetaljiPage() {
     }
   };
 
+  const ispisiNaljepnicu = () => {
+    if (!item || !qrUrl) return;
+    const popup = window.open("", "_blank", "width=720,height=520");
+    if (!popup) {
+      alert("Preglednik je blokirao prozor za ispis. Dopusti skočne prozore za ovu stranicu i pokušaj ponovno.");
+      return;
+    }
+
+    popup.document.open();
+    popup.document.write(`<!doctype html>
+      <html lang="hr"><head><meta charset="utf-8"><title>${escapeHtml(item.inventarniBroj || "Inventarna naljepnica")}</title>
+      <style>
+        @page { size: 60mm 40mm; margin: 0; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; width: 60mm; height: 40mm; overflow: hidden; font-family: Arial, sans-serif; background: white; }
+        .label { width: 60mm; height: 40mm; padding: 4mm; display: grid; grid-template-columns: 27mm minmax(0, 1fr); gap: 3mm; align-items: center; overflow: hidden; color: #111827; }
+        .qr { width: 27mm; height: 27mm; display: block; }
+        .text { min-width: 0; line-height: 1.15; }
+        .app { font-size: 7pt; font-weight: 800; margin-bottom: 2mm; }
+        .number { font-size: 15pt; font-weight: 900; overflow-wrap: anywhere; margin-bottom: 1.5mm; }
+        .name { font-size: 8pt; font-weight: 700; max-height: 7mm; overflow: hidden; margin-bottom: 1.5mm; }
+        .serial { font-size: 6pt; overflow-wrap: anywhere; }
+        @media screen { body { border: 1px solid #d1d5db; } }
+      </style></head><body>
+      <div class="label">
+        <img class="qr" src="${escapeHtml(qrUrl)}" alt="QR kod">
+        <div class="text">
+          <div class="app">ZNR APLIKACIJA</div>
+          <div class="number">${escapeHtml(item.inventarniBroj || "BEZ BROJA")}</div>
+          <div class="name">${escapeHtml(item.naziv)}</div>
+          <div class="serial">Tvornički broj: ${escapeHtml(item.serijskiBroj || "-")}</div>
+        </div>
+      </div>
+      <script>window.addEventListener("load", function () { setTimeout(function () { window.print(); }, 250); });<\/script>
+      </body></html>`);
+    popup.document.close();
+  };
+
   if (loading) {
     return (
       <div style={pageStyle}>
@@ -246,23 +294,6 @@ export default function RadnaOpremaDetaljiPage() {
 
   return (
     <div style={pageStyle}>
-      <style jsx global>{`
-        @media print {
-          @page { size: 60mm 40mm; margin: 0; }
-          body * { visibility: hidden !important; }
-          .machine-inventory-label, .machine-inventory-label * { visibility: visible !important; }
-          .machine-inventory-label {
-            position: fixed !important;
-            inset: 0 auto auto 0 !important;
-            width: 60mm !important;
-            height: 40mm !important;
-            margin: 0 !important;
-            border: 0 !important;
-            box-shadow: none !important;
-            border-radius: 0 !important;
-          }
-        }
-      `}</style>
       <div style={containerStyle}>
         <div style={{ marginBottom: 16 }}>
           <Link href={`/tvrtke/${firmaId}/radna-oprema`} style={backLinkStyle}>
@@ -332,7 +363,7 @@ export default function RadnaOpremaDetaljiPage() {
             <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={ispisiNaljepnicu}
                 style={primaryButtonStyle}
               >
                 Ispiši naljepnicu
