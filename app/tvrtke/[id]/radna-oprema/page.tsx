@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
+import { buildWorkEquipmentLabelPdf } from "@/lib/work-equipment-label-pdf";
+
+pdfMake.addVirtualFileSystem(pdfFonts);
 
 type Tvrtka = {
   id: string;
@@ -55,20 +60,6 @@ const praznaForma: Forma = {
   napomena: "",
 };
 
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;",
-  })[character] || character);
-}
-
-function labelInventoryNumber(value: string | null) {
-  return value ? value.replace(/^RO-/i, "") : "BEZ BROJA";
-}
-
 export default function RadnaOpremaPage() {
   const params = useParams();
   const firmaIdRaw = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -89,6 +80,7 @@ export default function RadnaOpremaPage() {
   const [spremanje, setSpremanje] = useState(false);
   const [importanje, setImportanje] = useState(false);
   const [dodjeljivanjeBrojeva, setDodjeljivanjeBrojeva] = useState(false);
+  const [generiranjePdfa, setGeneriranjePdfa] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -463,66 +455,48 @@ export default function RadnaOpremaPage() {
     });
   };
 
-  const ispisiQrNaljepnice = () => {
-    const selected = items.filter((item) => odabraniIds.includes(item.id));
+  const napraviQrPdf = async (action: "download" | "print") => {
+    const selected = items.filter(
+      (item) => item.firmaId === firmaId && odabraniIds.includes(item.id)
+    );
     if (selected.length === 0) {
       alert("Odaberi barem jednu stavku za ispis.");
       return;
     }
 
-    const popup = window.open("", "_blank", "width=1100,height=850");
-    if (!popup) {
-      alert("Preglednik je blokirao prozor za ispis. Dopusti skočne prozore i pokušaj ponovno.");
-      return;
+    try {
+      setGeneriranjePdfa(true);
+      setGreska("");
+
+      const documentDefinition = buildWorkEquipmentLabelPdf({
+        companyName: tvrtka?.naziv || "Tvrtka",
+        companyId: firmaId,
+        origin: window.location.origin,
+        items: selected,
+      });
+      const pdf = pdfMake.createPdf(documentDefinition);
+      const safeCompanyName = (tvrtka?.naziv || "tvrtka")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .toLowerCase();
+      const fileName = `qr-naljepnice-${safeCompanyName || "tvrtka"}.pdf`;
+
+      if (action === "download") {
+        pdf.download(fileName);
+      } else {
+        pdf.print();
+      }
+    } catch (err) {
+      setGreska(
+        err instanceof Error
+          ? err.message
+          : "Ne mogu izraditi PDF s QR naljepnicama."
+      );
+    } finally {
+      setGeneriranjePdfa(false);
     }
-
-    const pages: RadnaOprema[][] = [];
-    for (let index = 0; index < selected.length; index += 8) {
-      pages.push(selected.slice(index, index + 8));
-    }
-
-    const companyName = tvrtka?.naziv || "Tvrtka";
-    const sheets = pages.map((page) => `
-      <section class="sheet">
-        ${page.map((item) => {
-          const detailUrl = `${window.location.origin}/tvrtke/${firmaId}/radna-oprema/${item.id}`;
-          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=24&data=${encodeURIComponent(detailUrl)}`;
-          return `<article class="label">
-            <div class="qr-wrap"><img class="qr" src="${escapeHtml(qrUrl)}" alt="QR kod"></div>
-            <div class="label-text">
-              <div class="company">${escapeHtml(companyName)}</div>
-              <div class="number">${escapeHtml(labelInventoryNumber(item.inventarniBroj))}</div>
-              <div class="equipment">${escapeHtml(item.naziv)}</div>
-              ${item.serijskiBroj ? `<div class="serial">Tvornički broj: ${escapeHtml(item.serijskiBroj)}</div>` : ""}
-            </div>
-          </article>`;
-        }).join("")}
-      </section>
-    `).join("");
-
-    popup.document.open();
-    popup.document.write(`<!doctype html><html lang="hr"><head><meta charset="utf-8">
-      <title>QR naljepnice - ${escapeHtml(companyName)}</title>
-      <style>
-        @page { size: A4 portrait; margin: 0; }
-        * { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; font-family: Arial, sans-serif; color: #000; background: #fff; }
-        .sheet { width: 210mm; height: 297mm; padding: 10mm; display: grid; grid-template-columns: repeat(2, 90mm); grid-template-rows: repeat(4, 60mm); column-gap: 10mm; row-gap: 7mm; align-content: center; page-break-after: always; break-after: page; overflow: hidden; }
-        .sheet:last-child { page-break-after: auto; break-after: auto; }
-        .label { position: relative; width: 90mm; height: 60mm; padding: 5mm; display: grid; grid-template-columns: 43mm minmax(0, 1fr); gap: 5mm; align-items: center; overflow: hidden; background: #fff; }
-        .label::after { content: ""; position: absolute; inset: 0; border: 0.2mm solid #777; pointer-events: none; }
-        .qr-wrap { width: 43mm; height: 43mm; padding: 2mm; display: flex; align-items: center; justify-content: center; background: #fff; }
-        .qr { width: 39mm; height: 39mm; display: block; }
-        .label-text { min-width: 0; line-height: 1.15; }
-        .company { font-size: 9pt; font-weight: 800; max-height: 8mm; overflow: hidden; margin-bottom: 3mm; }
-        .number { font-size: 22pt; font-weight: 900; white-space: nowrap; letter-spacing: 0; margin-bottom: 2mm; }
-        .equipment { font-size: 11pt; font-weight: 700; overflow: hidden; margin-bottom: 2mm; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-        .serial { font-size: 8pt; overflow-wrap: anywhere; }
-        @media screen { .sheet { margin: 0 auto 8mm; box-shadow: 0 0 8px rgba(0,0,0,.2); } }
-      </style></head><body>${sheets}
-      <script>window.addEventListener("load", function () { setTimeout(function () { window.print(); }, 350); });<\/script>
-      </body></html>`);
-    popup.document.close();
   };
 
   const spremi = async () => {
@@ -1042,12 +1016,30 @@ export default function RadnaOpremaPage() {
               ) : null}
               <button
                 type="button"
-                onClick={ispisiQrNaljepnice}
-                disabled={odabraniIds.length === 0}
+                onClick={() => napraviQrPdf("download")}
+                disabled={odabraniIds.length === 0 || generiranjePdfa}
+                style={{
+                  ...secondaryButtonStyle,
+                  opacity: odabraniIds.length === 0 || generiranjePdfa ? 0.5 : 1,
+                  cursor:
+                    odabraniIds.length === 0 || generiranjePdfa
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                {generiranjePdfa ? "Izrada PDF-a..." : "Preuzmi PDF"}
+              </button>
+              <button
+                type="button"
+                onClick={() => napraviQrPdf("print")}
+                disabled={odabraniIds.length === 0 || generiranjePdfa}
                 style={{
                   ...primaryButtonStyle,
-                  opacity: odabraniIds.length === 0 ? 0.5 : 1,
-                  cursor: odabraniIds.length === 0 ? "not-allowed" : "pointer",
+                  opacity: odabraniIds.length === 0 || generiranjePdfa ? 0.5 : 1,
+                  cursor:
+                    odabraniIds.length === 0 || generiranjePdfa
+                      ? "not-allowed"
+                      : "pointer",
                 }}
               >
                 Ispiši QR naljepnice
