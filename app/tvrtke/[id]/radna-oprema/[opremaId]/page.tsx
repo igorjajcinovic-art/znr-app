@@ -20,6 +20,11 @@ type RadnaOprema = {
   napomena: string | null;
 };
 
+type Tvrtka = {
+  id: string;
+  naziv: string;
+};
+
 type Dokument = {
   id: string;
   radnaOpremaId: string;
@@ -53,6 +58,7 @@ export default function RadnaOpremaDetaljiPage() {
   const opremaId = String(opremaIdRaw ?? "");
 
   const [item, setItem] = useState<RadnaOprema | null>(null);
+  const [tvrtka, setTvrtka] = useState<Tvrtka | null>(null);
   const [dokumenti, setDokumenti] = useState<Dokument[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -75,13 +81,14 @@ export default function RadnaOpremaDetaljiPage() {
       setLoading(true);
       setGreska("");
 
-      const [opremaRes, dokumentiRes] = await Promise.all([
+      const [opremaRes, dokumentiRes, tvrtkeRes] = await Promise.all([
         fetch(`/api/radna-oprema/${opremaId}`, {
           cache: "no-store",
         }),
         fetch(`/api/radna-oprema-dokumenti?radnaOpremaId=${opremaId}`, {
           cache: "no-store",
         }),
+        fetch("/api/tvrtke", { cache: "no-store" }),
       ]);
 
       if (!opremaRes.ok) {
@@ -92,11 +99,17 @@ export default function RadnaOpremaDetaljiPage() {
         throw new Error("Ne mogu učitati dokumente.");
       }
 
-      const data = await opremaRes.json();
-      const docs = await dokumentiRes.json();
+      if (!tvrtkeRes.ok) {
+        throw new Error("Ne mogu učitati podatke o tvrtki.");
+      }
+
+      const data: RadnaOprema = await opremaRes.json();
+      const docs: Dokument[] = await dokumentiRes.json();
+      const tvrtke: Tvrtka[] = await tvrtkeRes.json();
 
       setItem(data);
       setDokumenti(docs);
+      setTvrtka(tvrtke.find((entry) => entry.id === data.firmaId) || null);
     } catch (err) {
       setGreska(err instanceof Error ? err.message : "Greška pri učitavanju.");
     } finally {
@@ -150,7 +163,7 @@ export default function RadnaOpremaDetaljiPage() {
 
   const qrUrl = useMemo(() => {
     if (!detaljUrl) return "";
-    return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
+    return `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=24&data=${encodeURIComponent(
       detaljUrl
     )}`;
   }, [detaljUrl]);
@@ -244,21 +257,22 @@ export default function RadnaOpremaDetaljiPage() {
         * { box-sizing: border-box; }
         html, body { margin: 0; width: 90mm; height: 60mm; overflow: hidden; font-family: Arial, sans-serif; background: white; }
         .label { width: 90mm; height: 60mm; padding: 5mm; display: grid; grid-template-columns: 43mm minmax(0, 1fr); gap: 5mm; align-items: center; overflow: hidden; color: #111827; border: 0.5mm solid #111827; }
-        .qr { width: 43mm; height: 43mm; display: block; }
+        .qr-wrap { width: 43mm; height: 43mm; padding: 2mm; display: flex; align-items: center; justify-content: center; background: #fff; }
+        .qr { width: 39mm; height: 39mm; display: block; }
         .text { min-width: 0; line-height: 1.15; }
-        .app { font-size: 9pt; font-weight: 800; margin-bottom: 3mm; }
-        .number { font-size: 23pt; font-weight: 900; overflow-wrap: anywhere; margin-bottom: 2mm; }
-        .name { font-size: 11pt; font-weight: 700; max-height: 11mm; overflow: hidden; margin-bottom: 2mm; }
+        .company { font-size: 9pt; font-weight: 800; margin-bottom: 3mm; max-height: 8mm; overflow: hidden; }
+        .number { font-size: 22pt; font-weight: 900; white-space: nowrap; letter-spacing: 0; margin-bottom: 2mm; }
+        .name { font-size: 11pt; font-weight: 700; overflow: hidden; margin-bottom: 2mm; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .serial { font-size: 8pt; overflow-wrap: anywhere; }
         @media screen { body { border: 1px solid #d1d5db; } }
       </style></head><body>
       <div class="label">
-        <img class="qr" src="${escapeHtml(qrUrl)}" alt="QR kod">
+        <div class="qr-wrap"><img class="qr" src="${escapeHtml(qrUrl)}" alt="QR kod"></div>
         <div class="text">
-          <div class="app">ZNR APLIKACIJA</div>
+          <div class="company">${escapeHtml(tvrtka?.naziv || "Tvrtka")}</div>
           <div class="number">${escapeHtml(item.inventarniBroj || "BEZ BROJA")}</div>
           <div class="name">${escapeHtml(item.naziv)}</div>
-          <div class="serial">Tvornički broj: ${escapeHtml(item.serijskiBroj || "-")}</div>
+          ${item.serijskiBroj ? `<div class="serial">Tvornički broj: ${escapeHtml(item.serijskiBroj)}</div>` : ""}
         </div>
       </div>
       <script>window.addEventListener("load", function () { setTimeout(function () { window.print(); }, 250); });<\/script>
@@ -345,18 +359,22 @@ export default function RadnaOpremaDetaljiPage() {
             </p>
 
             <div className="machine-inventory-label" style={inventoryLabelStyle}>
-              {qrUrl ? (
-                <img
-                  src={qrUrl}
-                  alt="QR kod stroja"
-                  style={inventoryQrStyle}
-                />
-              ) : null}
+              <div style={inventoryQrWrapStyle}>
+                {qrUrl ? (
+                  <img
+                    src={qrUrl}
+                    alt="QR kod stroja"
+                    style={inventoryQrStyle}
+                  />
+                ) : null}
+              </div>
               <div style={inventoryLabelTextStyle}>
-                <div style={inventoryAppStyle}>ZNR APLIKACIJA</div>
+                <div style={inventoryCompanyStyle}>{tvrtka?.naziv || "Tvrtka"}</div>
                 <div style={inventoryNumberStyle}>{item.inventarniBroj || "BEZ BROJA"}</div>
                 <div style={inventoryNameStyle}>{item.naziv}</div>
-                <div style={inventorySerialStyle}>Tvornički broj: {item.serijskiBroj || "-"}</div>
+                {item.serijskiBroj ? (
+                  <div style={inventorySerialStyle}>Tvornički broj: {item.serijskiBroj}</div>
+                ) : null}
               </div>
             </div>
 
@@ -687,9 +705,20 @@ const inventoryLabelStyle: React.CSSProperties = {
 };
 
 const inventoryQrStyle: React.CSSProperties = {
+  width: "39mm",
+  height: "39mm",
+  display: "block",
+};
+
+const inventoryQrWrapStyle: React.CSSProperties = {
   width: "43mm",
   height: "43mm",
-  display: "block",
+  padding: "2mm",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "#ffffff",
+  boxSizing: "border-box",
 };
 
 const inventoryLabelTextStyle: React.CSSProperties = {
@@ -698,16 +727,19 @@ const inventoryLabelTextStyle: React.CSSProperties = {
   lineHeight: 1.15,
 };
 
-const inventoryAppStyle: React.CSSProperties = {
+const inventoryCompanyStyle: React.CSSProperties = {
   fontSize: 10,
   fontWeight: 800,
   marginBottom: 5,
+  maxHeight: 24,
+  overflow: "hidden",
 };
 
 const inventoryNumberStyle: React.CSSProperties = {
   fontSize: 28,
   fontWeight: 900,
-  overflowWrap: "anywhere",
+  whiteSpace: "nowrap",
+  letterSpacing: 0,
   marginBottom: 5,
 };
 
