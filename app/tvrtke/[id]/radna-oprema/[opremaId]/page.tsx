@@ -47,6 +47,10 @@ function escapeHtml(value: string) {
   })[character] || character);
 }
 
+function inventoryLabelNumber(value: string | null) {
+  return value ? value.replace(/^RO-/i, "") : "BEZ BROJA";
+}
+
 export default function RadnaOpremaDetaljiPage() {
   const params = useParams();
   const firmaIdRaw = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -270,7 +274,7 @@ export default function RadnaOpremaDetaljiPage() {
         <div class="qr-wrap"><img class="qr" src="${escapeHtml(qrUrl)}" alt="QR kod"></div>
         <div class="text">
           <div class="company">${escapeHtml(tvrtka?.naziv || "Tvrtka")}</div>
-          <div class="number">${escapeHtml(item.inventarniBroj || "BEZ BROJA")}</div>
+          <div class="number">${escapeHtml(inventoryLabelNumber(item.inventarniBroj))}</div>
           <div class="name">${escapeHtml(item.naziv)}</div>
           ${item.serijskiBroj ? `<div class="serial">Tvornički broj: ${escapeHtml(item.serijskiBroj)}</div>` : ""}
         </div>
@@ -370,7 +374,7 @@ export default function RadnaOpremaDetaljiPage() {
               </div>
               <div style={inventoryLabelTextStyle}>
                 <div style={inventoryCompanyStyle}>{tvrtka?.naziv || "Tvrtka"}</div>
-                <div style={inventoryNumberStyle}>{item.inventarniBroj || "BEZ BROJA"}</div>
+                <div style={inventoryNumberStyle}>{inventoryLabelNumber(item.inventarniBroj)}</div>
                 <div style={inventoryNameStyle}>{item.naziv}</div>
                 {item.serijskiBroj ? (
                   <div style={inventorySerialStyle}>Tvornički broj: {item.serijskiBroj}</div>
